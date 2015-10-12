@@ -1,0 +1,945 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline | leaf&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Leaf Ye">
+    
+
+    
+    <meta name="description" content="Netty ChannelHandler 和 ChannelPipeline本章讨论的内容包括
+
+Channel
+ChannelHandler
+ChannePipeline
+ChannelHandlerContext
+
+在Netty的数据容器ByteBuf中使用的是打包数据(package data). 在本章中我们如何在应用中移动这些数据容器。包括出站和入站的动作，和如何处理里面的内容。Nett">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline">
+<meta property="og:url" content="http://iamleaf.github.io/2015/10/10/6-handler/index.html">
+<meta property="og:site_name" content="leaf's blog">
+<meta property="og:description" content="Netty ChannelHandler 和 ChannelPipeline本章讨论的内容包括
+
+Channel
+ChannelHandler
+ChannePipeline
+ChannelHandlerContext
+
+在Netty的数据容器ByteBuf中使用的是打包数据(package data). 在本章中我们如何在应用中移动这些数据容器。包括出站和入站的动作，和如何处理里面的内容。Nett">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/61channle-lifecycle.png">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/62channelpipeline-layout.png">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/63channle-pipeline-context.png">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/63pipeline-flow.png">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/65context-flow.png">
+<meta property="og:updated_time" content="2015-10-11T06:16:56.368Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline">
+<meta name="twitter:description" content="Netty ChannelHandler 和 ChannelPipeline本章讨论的内容包括
+
+Channel
+ChannelHandler
+ChannePipeline
+ChannelHandlerContext
+
+在Netty的数据容器ByteBuf中使用的是打包数据(package data). 在本章中我们如何在应用中移动这些数据容器。包括出站和入站的动作，和如何处理里面的内容。Nett">
+
+    
+    
+    <link rel="icon" href="/blog/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/blog/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/blog/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="../../../../css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/blog/"><img src="/blog/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/blog/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
+				<h2 class="blog-motto">宁静致远</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/blog/">Home</a></li>
+					
+						<li><a href="/blog/archives">Archives</a></li>
+					
+						<li><a href="/blog/about">About</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:iamleaf.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/blog/2015/10/10/6-handler/" title="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline" itemprop="url">Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/blog/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
+		
+  <p class="article-time">
+    <time datetime="2015-10-10T12:44:37.000Z" itemprop="datePublished"> 发表于 2015-10-10</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Netty_ChannelHandler_和_ChannelPipeline"><span class="toc-text">Netty ChannelHandler 和 ChannelPipeline</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1_ChannelHandler_系列类"><span class="toc-text">6.1 ChannelHandler 系列类</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#6-1-1_Channel的生命周期"><span class="toc-text">6.1.1 Channel的生命周期</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#6-1-2_ChannelHandler_生命周期"><span class="toc-text">6.1.2  ChannelHandler 生命周期</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_6-2_ChannelHandler_生命周期方法"><span class="toc-text">表 6.2 ChannelHandler 生命周期方法</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#6-1-3_ChannelHandler_子接口"><span class="toc-text">6.1.3  ChannelHandler 子接口</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#ChannelHandler_适配类"><span class="toc-text">ChannelHandler 适配类</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#6-1-4_ChannelInboundHandler"><span class="toc-text">6.1.4  ChannelInboundHandler</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#使用ChannelInboundHandlerAdapter,抛弃数据处理例子"><span class="toc-text">使用ChannelInboundHandlerAdapter,抛弃数据处理例子</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#使用SimpleChannelInboundHandler丢弃数据处理"><span class="toc-text">使用SimpleChannelInboundHandler丢弃数据处理</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#6-1-5_ChannelOutboundHandler"><span class="toc-text">6.1.5  ChannelOutboundHandler</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#6-1-6_资源管理"><span class="toc-text">6.1.6 资源管理</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#避免泄露的最佳实践"><span class="toc-text">避免泄露的最佳实践</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#使用ChannelOutboundHandlerAdapter出站时处理丢弃数据"><span class="toc-text">使用ChannelOutboundHandlerAdapter出站时处理丢弃数据</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2_ChannelPipeline"><span class="toc-text">6.2 ChannelPipeline</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#6-2-1_修改ChannelPipeline"><span class="toc-text">6.2.1  修改ChannelPipeline</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_6-6_ChannelHandler_相关_API-"><span class="toc-text">表 6.6 ChannelHandler 相关 API.</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#表_6-7_ChannelPipeline_中获取ChannelHandler的方法"><span class="toc-text">表 6.7 ChannelPipeline 中获取ChannelHandler的方法</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#6-2-2_触发事件"><span class="toc-text">6.2.2  触发事件</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_6-8_ChannelPipeline的入站事件"><span class="toc-text">表 6.8 ChannelPipeline的入站事件</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#表_6-9_ChannelPipeline的出站动作"><span class="toc-text">表 6.9 ChannelPipeline的出站动作</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3_ChannelHandlerContext"><span class="toc-text">6.3 ChannelHandlerContext</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表6-10_ChannelHandlerContext_API"><span class="toc-text">表6.10 ChannelHandlerContext API</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#6-3-1_使用_ChannelHandler"><span class="toc-text">6.3.1  使用 ChannelHandler</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#图6-3_Channel,Handler,Pipeline，Context关系图"><span class="toc-text">图6.3 Channel,Handler,Pipeline，Context关系图</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_6-6_从ChannelHandlerContext中获取channel"><span class="toc-text">源码 6.6 从ChannelHandlerContext中获取channel</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码6-7_从ChannelHandlerContext中获取ChannelPipeline"><span class="toc-text">源码6.7 从ChannelHandlerContext中获取ChannelPipeline</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#图6-4_事件流动示例图"><span class="toc-text">图6.4 事件流动示例图</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_6-8_ChannelHandlerContext发起的事件"><span class="toc-text">源码 6.8 ChannelHandlerContext发起的事件</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#图_6-5_使用ChannelHandlerContext的传播事件"><span class="toc-text">图 6.5 使用ChannelHandlerContext的传播事件</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#6-3-2_ChannelHandler_和ChannelHandlerContext_高级用法"><span class="toc-text">6.3.2 ChannelHandler 和ChannelHandlerContext 高级用法</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_6-9_ChannelHandlerContext_使用"><span class="toc-text">源码 6.9 ChannelHandlerContext 使用</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_6-10_可分享的_ChannelHandler"><span class="toc-text">源码 6.10 可分享的 ChannelHandler</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_6-11_错误使用_@Sharable"><span class="toc-text">源码 6.11 错误使用 @Sharable</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#为什么需要共享ChannelHandler？"><span class="toc-text">为什么需要共享ChannelHandler？</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4_Summary"><span class="toc-text">6.4  Summary</span></a></li></ol></li></ol>
+		
+		</div>
+		
+		<h2 id="Netty_ChannelHandler_和_ChannelPipeline">Netty ChannelHandler 和 ChannelPipeline</h2><p>本章讨论的内容包括</p>
+<ul>
+<li>Channel</li>
+<li>ChannelHandler</li>
+<li>ChannePipeline</li>
+<li>ChannelHandlerContext</li>
+</ul>
+<p>在Netty的数据容器ByteBuf中使用的是打包数据(package data). 在本章中我们如何在应用中移动这些数据容器。包括出站和入站的动作，和如何处理里面的内容。<br>Netty为数据处理提供了强大的开发能力，我们已经看到如何把ChannelHandler用灵活、模块化地串在一个ChannelPipeline中来构建处理数据的步骤。<br>在这里我们将会讨论如何使用一些Netty的基础组件如ChannelHandler,ChannelPipeline,ChannelHandlerContext等来编写简单、可重用的处理逻辑。</p>
+<h3 id="6-1_ChannelHandler_系列类">6.1 ChannelHandler 系列类</h3><p>在我们深入讨论ChannelHandler的内部实现前，我们先花点时间来理解一下 这里的Netty相关的组件模型。它将会对理解ChannelHandler和它的子类提供帮助。</p>
+<h4 id="6-1-1_Channel的生命周期">6.1.1 Channel的生命周期</h4><p>Channel 提供一个简单但是强大的状态模型，它和ChannelInboundHandler的API密切相关。4个Channel状态如下表所示：</p>
+<p>表 6.1 Channel 生命周期状态</p>
+<table>
+<thead>
+<tr>
+<th><em>状态</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>channelUnregistered</td>
+<td>Channel已经被创建，但是还没有注册到一个Eventoop</td>
+</tr>
+<tr>
+<td>channelRegistered</td>
+<td>Channel已经注册到一个EventLoop</td>
+</tr>
+<tr>
+<td>channelActive</td>
+<td>Channel已经激活(连接到远端)，现在可以接受和发送数据了</td>
+</tr>
+<tr>
+<td>channelInActive</td>
+<td>Channel 不再连接到远端</td>
+</tr>
+</tbody>
+</table>
+<p>通常意义下Channel的生命周期如下图所示。 随着这些状态改变，相应的事件发生，然后在ChannelPipeline的ChannelHandler中就可以处理这些事件。</p>
+<p><img src="/blog/img/61channle-lifecycle.png" alt="Channel生命周期图"></p>
+<h4 id="6-1-2_ChannelHandler_生命周期">6.1.2  ChannelHandler 生命周期</h4><p>现在我们看一下在ChannelHandler接口中定义的生命周期方法, 在下表罗列：</p>
+<h5 id="表_6-2_ChannelHandler_生命周期方法">表 6.2 ChannelHandler 生命周期方法</h5><table>
+<thead>
+<tr>
+<th><em>类型</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>handlerAdded</td>
+<td>当ChannelHander被添加到ChannelPipeline时候调用</td>
+</tr>
+<tr>
+<td>handlerRemoved</td>
+<td>当ChannelHandler从ChannelPipeline中移除时候调用</td>
+</tr>
+<tr>
+<td>exceptionCaught</td>
+<td>当在处理ChannelPipeline过程中发生异常时候调用</td>
+</tr>
+</tbody>
+</table>
+<p>这些方法都是在一个ChannleHandler被添加ChannelPipeline或从ChannelPipeline中移除后调用。这些方法都会被传入一个ChannelHandlerContext对象</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ChannelHandler</span> </span>&#123;</span><br><span class="line"><span class="comment">/**</span><br><span class="line"> * Gets called after the &#123;<span class="doctag">@link</span> ChannelHandler&#125; was added to the actual context and it's ready to handle events.</span><br><span class="line"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">handlerAdded</span><span class="params">(ChannelHandlerContext ctx)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span><br><span class="line"> * Gets called after the &#123;<span class="doctag">@link</span> ChannelHandler&#125; was removed from the actual context and it doesn't handle events</span><br><span class="line"> * anymore.</span><br><span class="line"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">handlerRemoved</span><span class="params">(ChannelHandlerContext ctx)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span><br><span class="line"> * Gets called if a &#123;<span class="doctag">@link</span> Throwable&#125; was thrown.</span><br><span class="line"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">exceptionCaught</span><span class="params">(ChannelHandlerContext ctx, Throwable cause)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="6-1-3_ChannelHandler_子接口">6.1.3  ChannelHandler 子接口</h4><p>Netty定义了如下两个重要的ChannelHandler子接口</p>
+<ul>
+<li>ChannelInboundHandler - 处理入站数据以及所有的状态改变事件 .</li>
+<li>ChannelOutboundHandler - 处理出站数据并且允许拦截所有动作</li>
+</ul>
+<h5 id="ChannelHandler_适配类">ChannelHandler 适配类</h5><p>Netty提供了一个简单的ChannelHandler的抽象类实现ChannelHandlerAdapter。它已经对上述的接口方法进行骨架式的实现，并且把事件传递给Pipeline中的下一个Handler，直到pipeline的尾部。这个抽象类也是作为 ChannelInboundHandlerAdapter and ChannelOutboundHandlerAdapter的基类。这三个适配类可以作为你自己实现Handler的起点，你可以扩展它，重载你需要客户化的方法。</p>
+<p>下一个段落里我们会详细讨论这些子类.</p>
+<h4 id="6-1-4_ChannelInboundHandler">6.1.4  ChannelInboundHandler</h4><p>ChannelInboundHandler接口的方法罗列在下表。这些方法会在，当数据接收到或者和它关联的Channel的状态改变的时候被调用。可以看出Channel生命周期的方法也被整合到这里.</p>
+<table>
+<thead>
+<tr>
+<th><em>类型</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>channelRegistered</td>
+<td>一个Channel注册到一个EventLoop时候调用</td>
+</tr>
+<tr>
+<td>channelUnregistered</td>
+<td>一个channel从一个EventLoop注销，不能进行IO操作时候调用</td>
+</tr>
+<tr>
+<td>channelActive</td>
+<td>一个Channel激活，可以进行IO操作时候调用</td>
+</tr>
+<tr>
+<td>channelInactive</td>
+<td>一个Channel离开激活状态,并且不再连接到远端时候调用</td>
+</tr>
+<tr>
+<td>channelReadComplete</td>
+<td>Channel上一个读动作完成后调用</td>
+</tr>
+<tr>
+<td>channelRead</td>
+<td>读动作正从Channel 上读取数据时候调用</td>
+</tr>
+<tr>
+<td>channelWritabilityChanged</td>
+<td>当Channel的读状态改变的时候调用，使用者可以确保不会写的太快（有OutOfMemoryError的风险)，或者当Channel重新变得可写入的时候重新开始写入。可以使用Channel.isWritable()来判断Channel是否可写入。可写的阀值可以通过 Channel.config().setWriteHighWaterMark() 和 Channel.config().setWriteLowWaterMark() 设置。</td>
+</tr>
+<tr>
+<td>userEventTriggered(…)</td>
+<td>当用户调用 Channel.fireUserEventTriggered()方法,试图在Pipeline中传递一个POJO的时候调用。可以在pipeline中传递用户定义的事件时候使用，同时处理该事件。</td>
+</tr>
+</tbody>
+</table>
+<p>你需要记得释放资源，因为Netty使用池化的ByteBuf，忘记的话会导致内存泄露。示例代码如下：</p>
+<h5 id="使用ChannelInboundHandlerAdapter,抛弃数据处理例子">使用ChannelInboundHandlerAdapter,抛弃数据处理例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="annotation">@Sharable</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DiscardHandler</span> <span class="keyword">extends</span> <span class="title">ChannelInboundHandlerAdapter</span> </span>&#123; <span class="comment">//扩展 ChannelInboundHandlerAdapter 类</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead</span><span class="params">(ChannelHandlerContext ctx,  Object msg)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// ...处理逻辑</span></span><br><span class="line">        ReferenceCountUtil.release(msg); <span class="comment">//通过调用CountUtil.release() ,丢弃收到消息</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Netty在日志中以WARN级别输出没有释放的资源。这个会使得查找忘记释放资源的代码变得很容易。因为需要手动添加释放资源的代码，貌似不符合Java的风范，于是Netty提供了另一个选择。简单地继承SimpleChannelInboundHandler就可以无需手动释放资源了。示例代码如下：</p>
+<h5 id="使用SimpleChannelInboundHandler丢弃数据处理">使用SimpleChannelInboundHandler丢弃数据处理</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="annotation">@Sharable</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SimpleDiscardHandler</span>  <span class="keyword">extends</span> <span class="title">SimpleChannelInboundHandler</span>&lt;<span class="title">Object</span>&gt; </span>&#123; <span class="comment">//SimpleChannelInboundHandler</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext ctx,  Object msg)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// No need to do anything special //无需显示的代码释放资源</span></span><br><span class="line">        <span class="comment">//你的处理逻辑代码</span></span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>请注意：由于SimpleChannelInboundHandler 自动释放资源，并没有保存任何消息的引用以后来使用，可能会遇到”Error! Reference source not found..”的错误。<br>我们会在后来来讨论这个问题。</p>
+</blockquote>
+<h4 id="6-1-5_ChannelOutboundHandler">6.1.5  ChannelOutboundHandler</h4><p>现在我们已经了解了处理入站数据和动作，ChannelOutboundHandler 提供了出站动作和回调方法。这些可以被  Channel, ChannelPipeline, ChannelHandlerContext 调用.<br>ChannelOutboundHandler 的一个强大的地方是可以在处理请求时候推迟一个动作或者事件。这个能力可以为处理请求提供一些精细的方法。例如你可以编写当远端已经挂起时候，<br>推迟刷入缓冲数据动作的代码，当远端恢复的时候再重新刷入缓冲数据。<br>下表显示了ChannelOutboundHandler的方法，从ChannelHandler继承过来的没有罗列。</p>
+<table>
+<thead>
+<tr>
+<th><em>方法</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bind()</td>
+<td>Channel绑定到本地地址时候调用</td>
+</tr>
+<tr>
+<td>connect()</td>
+<td>Channel连接到远端时候调用</td>
+</tr>
+<tr>
+<td>disconnect()</td>
+<td>Channel从远端断开时候调用</td>
+</tr>
+<tr>
+<td>close()</td>
+<td>关闭Channnel时候调用</td>
+</tr>
+<tr>
+<td>deregister()</td>
+<td>Channel从它注册的EventLoop中注销时候调用</td>
+</tr>
+<tr>
+<td>read()</td>
+<td>从Channel中读取数据时候调用</td>
+</tr>
+<tr>
+<td>flush()</td>
+<td>从Channel中刷入缓冲数据时候调用</td>
+</tr>
+<tr>
+<td>write()</td>
+<td>往Channel中写入数据到远端的时候调用</td>
+</tr>
+</tbody>
+</table>
+<p>大部分的上面的方法都会传入一个ChannelPromise 参数，这样的话当请求不再ChannelPipeline中往前传递的时候，ChannelPromise会接受到通知。</p>
+<blockquote>
+<p>ChannelPromise vs. ChannelFuture</p>
+<p>ChannelPromise是一种特殊的ChannelFuture，它允许你设定你的ChannelPromise的归属动作是成功还是失败。ChannelFuture是只读的，只能查询调用结果。<br>当你调用Channel.write()的时候，一个新的ChannelPromise就被创建了，并且在ChannelPipeline中传递。write()方法仅仅返回ChannelFuture对象，仅允许在动作完成的时候得到通知。<br>但是Netty本身将会使用ChannelPromise对象通知被返回的ChannelFuture对象，实际上大多数的时间里是ChannelPromise,返回的时候是ChannelFuture.</p>
+</blockquote>
+<p>就像前面提到的，ChannelOutboundHandlerAdapter 提供了骨架式的实现ChannelOutboundHandler接口。它会简单调用ChannelHandlerContext里的相应的方法就可以转发事件到ChannelPipleline的下一个ChannelOutboundHandler。<br>你就可以简单的实现你感兴趣的方法，就能完成你所需要的功能。</p>
+<h4 id="6-1-6_资源管理">6.1.6 资源管理</h4><p>不管你是在 ChannelInboundHandler.channelRead(…) 还是在 ChannelOutboundHandler.write(…) 上操纵数据，正确理解如何操纵杆资源，以确保没有资源泄露是很重要的。<br>就像ByteBuf章节里讲到的一样，通过Reference Counting的技术处理池化的ByteBuf，需要确保ByteBuf使用完毕后,它的Reference count被正确调整。<br>一个使用Reference-counting的折衷点就是，用户在消费消息必须小心，JVM有可能会对这个消息进行垃圾回收。因为Reference-counting的对象不在垃圾收集器的管辖范围内，<br>这个时候这个消息将可能不能放回到原先获取的资源池中。如果你忘记释放这些资源，很有可能你会遇到资源不足的问题。</p>
+<p>为了容易使用户发现没有释放的资源，Netty包含了一个叫做ResourceLeakDetctor功能，它会采用取样的缓冲区分配的方式，来检查是否在你的应用中有资源泄露。</p>
+<p>下面从源码级别看一下ByteBuf的资源管理, PooledByteBufAllocator分配的heap ByteBuf和direct ByteBuf ， UnpooledByteBufAllocator的Direct ByteBuf都是采用Bytebuf toLeakAwareBuffer(ByteBuf)方法包装过了.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> ByteBuf <span class="title">newDirectBuffer</span><span class="params">(<span class="keyword">int</span> initialCapacity, <span class="keyword">int</span> maxCapacity)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    ByteBuf buf;</span><br><span class="line">    ...</span><br><span class="line"><span class="keyword">return</span> toLeakAwareBuffer(buf);<span class="comment">//返回被包装过LeakDector的ByteBuf</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">static</span> ByteBuf <span class="title">toLeakAwareBuffer</span><span class="params">(ByteBuf buf)</span> </span>&#123;</span><br><span class="line">    ResourceLeak leak;</span><br><span class="line">    <span class="keyword">switch</span> (ResourceLeakDetector.getLevel()) &#123;</span><br><span class="line">        <span class="keyword">case</span> SIMPLE:</span><br><span class="line">            leak = AbstractByteBuf.leakDetector.open(buf);</span><br><span class="line">            <span class="keyword">if</span> (leak != <span class="keyword">null</span>) &#123;</span><br><span class="line">                buf = <span class="keyword">new</span> SimpleLeakAwareByteBuf(buf, leak);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">case</span> ADVANCED:</span><br><span class="line">        <span class="keyword">case</span> PARANOID:</span><br><span class="line">            leak = AbstractByteBuf.leakDetector.open(buf);</span><br><span class="line">            <span class="keyword">if</span> (leak != <span class="keyword">null</span>) &#123;</span><br><span class="line">                buf = <span class="keyword">new</span> AdvancedLeakAwareByteBuf(buf, leak);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> buf;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们可以看出有4个级别的泄露检测：</p>
+<table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DISABLED</td>
+<td>关闭泄露检测，不推荐.</td>
+</tr>
+<tr>
+<td>SIMPLE</td>
+<td>默认方式, 取样1%的缓冲，告知是否有泄露.</td>
+</tr>
+<tr>
+<td>ADVANCED</td>
+<td>取样1%缓冲，告知哪里泄露了 .</td>
+</tr>
+<tr>
+<td>PARANOID</td>
+<td>取样全部缓冲,告知哪里泄露。这会严重影响性能，建议仅在DEBUG方式下使用。</td>
+</tr>
+</tbody>
+</table>
+<p>可以在启动Netty应用时候加入JVM 系统属性 -Dio.netty.leakDetectionLevel 来指定泄露检测的级别.</p>
+<blockquote>
+<p>java -Dio.netty.leakDetectionLevel=advanced</p>
+</blockquote>
+<h5 id="避免泄露的最佳实践">避免泄露的最佳实践</h5><ol>
+<li>在单元测试和集成测试的时候运行在PARANOID 级别,发现可能的泄露.</li>
+<li>发布到生产环境前，在测试环境把Netty应用在SIMPLE级别运行一段时间，观察有没有泄露.</li>
+<li>如果有泄露，切换到ADVANCED级别，查看哪里泄露了.</li>
+</ol>
+<p>了解Netty资源管理之后，我们再来看一下如何在ChannelInboundHandler.channelRead(…) 和 ChannelOutboundHandler.write(…)中避免内存泄露.</p>
+<p>如果处理一个channelRead(…)动作，并且消费了该消息, 并没有通过ChannelHandlerContext.fireChannelRead(…)传递给下一个ChannelInboundHandler.那么你必须手工释放它，如下6.1代码例子所示。</p>
+<p>如果你在Channel中处理写入动作的时候,并且丢弃该消息，你需要注意释放该消息。如下例所示：</p>
+<h5 id="使用ChannelOutboundHandlerAdapter出站时处理丢弃数据">使用ChannelOutboundHandlerAdapter出站时处理丢弃数据</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Sharable</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DiscardOutboundHandler</span>  <span class="keyword">extends</span> <span class="title">ChannelOutboundHandlerAdapter</span> </span>&#123; <span class="comment">//扩展ChannelOutboundHandlerAdapter</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">write</span><span class="params">(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)</span> </span>&#123;</span><br><span class="line">        ....<span class="comment">//处理数据</span></span><br><span class="line">        ReferenceCountUtil.release(msg); <span class="comment">//释放资源</span></span><br><span class="line">        promise.setSuccess(); <span class="comment">//通知ChannelPromise数据已经被处理</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>请注意处理完成后，释放资源和通知ChannelPromise.如果ChannelPromise没有被告知，可能导致ChannelFutureListener没有收到通知。</p>
+<p>所以让我们总结一下,如果一个消息被消费或者丢弃，也就是说该消息不再传入下一个ChannelOutboundHandler处理了。那么这个时候必须要调用ReferenceCountUtil.release(msg)释放资源。<br>当消息被写入底层传输的时候或者是Channel被关闭时候，它会自动被释放。</p>
+<h3 id="6-2_ChannelPipeline">6.2 ChannelPipeline</h3><p>  从简单的角度来看，ChannelPipeline就是一系列的ChannelHandler实例的组合，它拦截了在Channel中流动的出站和入站事件。那么很好理解，这些ChanndlHandler就是用户编写数据处理和事件处理的逻辑的地方。</p>
+<p>  每次一个新的Channel被创建的时候，就会分配一个新的ChannelPipeline.这个分配是永久的，这个Channel不能再重新附加一个或者移除当前ChannelPipeline。这个是由Netty本身组件的生命周期管理的，无需开发者参与。<br>  一个事件可以被ChannelInboundHandler或者ChannelOutboundHandler处理，接着它会被通过调用ChannelHandlerContext的方法转发到下一个同类型的ChannlHandler。</p>
+<hr>
+<blockquote>
+<p><em>ChannelHandlerContext</em><br>ChannelHandlerContext,顾名思义，ChannelHandler的上下文环境，使ChannelHandler可以和ChannelPipeline、其他ChannelHandler进行交互，<br>也可以使一个ChannelHandler可以通知在同一个ChannelPipeline中的下一个ChannelHandler，甚至修改它所在的ChannelPipeline。</p>
+</blockquote>
+<pre><code>ChannelHandlerContext提供丰富API操作，处理<span class="keyword">I</span>/<span class="keyword">O</span>动作和处理事件。(详见<span class="number">6.3</span>)
+</code></pre><p>下图提供了一个典型的ChannelPipeline结构，包括出站和入站ChannelHandler。</p>
+<p><img src="/blog/img/62channelpipeline-layout.png" alt="ChannelPipeline结构"></p>
+<p>从上图我们看出来，ChannelPipeline主要是一些列ChannelHandler组合，ChannelPipeline还提供了在其中传播事件的能力。一个I/O事件将会被ChannelInboundHandler或者ChannelOutboundHandler处理，<br>将会通过调用ChannelHandlerContext的事件传播方法被转发到下一个ChannelHandler，比如ChannelHandlerContext.fireChannelRead(Object) 和 ChannelHandlerContext.write(Object)等。<br>一个入站的事件将会被ChannelInboundHandler处理，在图中从左边底部向上的方向流动。入站的数据通常是通过如SocketChannel.read(ByteBuffer)从远端读入的,或者说，读取了一个客户端的请求。<br>然后被传递到ChannelHandler中，由一系列预定义的Handler来处理。这些Handler就是业务逻辑实现的地方。<br>一个出站事件就是由ChannelOutboundHandler处理，如图中从右边上面向下的方向流动。一个OutboundHanlder通常产生和转换“写的请求”或者讲写入到远端的数据。<br>写动作通常被这个Channel分配的I/O线程处理，通常通过如SocketChannel.write(ByteBuff)来写入到远端。</p>
+<h4 id="6-2-1_修改ChannelPipeline">6.2.1  修改ChannelPipeline</h4><p> ChannelPipeline可以实时修改ChannelPipeline的组成，如可以添加、删除、替换ChannelPipeline中的其他ChannelHandler。我们来看一下它的API,</p>
+<h5 id="表_6-6_ChannelHandler_相关_API-">表 6.6 ChannelHandler 相关 API.</h5><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>addFirst， addBefore， addAfter， addLast</td>
+<td>添加一个ChannelHandler到ChannelPipeline</td>
+</tr>
+<tr>
+<td>Remove</td>
+<td>从ChannelPipeline中移除一个ChannelHandler</td>
+</tr>
+<tr>
+<td>Replace</td>
+<td>在ChannelPipeline中用另一个ChannelHandler替换其中一个ChannelHandler</td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">ChannelPipeline pipeline = ..;</span><br><span class="line">FirstHandler firstHandler = <span class="keyword">new</span> FirstHandler(); <span class="comment">//1 创建FirstHander实例</span></span><br><span class="line">pipeline.addLast(<span class="string">"handler1"</span>, firstHandler); <span class="comment">//2 添加firstHander到pipeline尾部，名字为handler1</span></span><br><span class="line">pipeline.addFirst(<span class="string">"handler2"</span>, <span class="keyword">new</span> SecondHandler()); <span class="comment">//3 添加到第二个Handler(SecondHandler)实例到第一个位置，这个会在handler1的前面</span></span><br><span class="line">pipeline.addLast(<span class="string">"handler3"</span>, <span class="keyword">new</span> ThirdHandler()); <span class="comment">//4 添加第三个Hander(ThirdHandler)实例到尾部，取名handler3</span></span><br><span class="line">pipeline.remove(<span class="string">"handler3"</span>); <span class="comment">//5 移除handler3</span></span><br><span class="line">pipeline.remove(firstHandler); <span class="comment">//6 移除firstHandler</span></span><br><span class="line">pipeline.replace(<span class="string">"handler2"</span>, <span class="string">"handler4"</span>, <span class="keyword">new</span> FourthHandler()); <span class="comment">//替换Handler2为ForthHandler的实例handler4</span></span><br></pre></td></tr></table></figure>
+<p>我们稍后会看到这种实时处理Pipeline中Handler的能力，可以实现一些非常灵活的逻辑处理。</p>
+<blockquote>
+<p><em>ChannelHandler在ChannelPipeline中的执行和阻塞情况</em><br>通常情况下每个添加到ChannelPipeline中的ChannelHandler都会在自己的EventLoop(即I/O线程)中处理事件，那么一个很重要的事情就是不要阻塞这个I/O线程，否则会对整个I/O处理带来负面的影响。<br>有时候必须要遇到阻塞API操作，比如处理数据库的操作，那么这种情况下可以调用ChannelPipeline的add…(EventExecutorGroup,String,ChannelHandler)方法来指定这些Handler在另外的EventExecutorGroup中执行<br>这种方式就可以把一些阻塞的动作移到专门的EventLoop中执行，减少了阻塞I/O线程的可能。</p>
+</blockquote>
+<p>ChannelPipeline的一些其他的方法：</p>
+<h5 id="表_6-7_ChannelPipeline_中获取ChannelHandler的方法">表 6.7 ChannelPipeline 中获取ChannelHandler的方法</h5><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>get()</td>
+<td>根据名字或类型返回一个ChannelHandler</td>
+</tr>
+<tr>
+<td>context()</td>
+<td>根据ChannelHandler名字和类型返回ChannelHandlerContext</td>
+</tr>
+<tr>
+<td>names() ，iterator()</td>
+<td>返回在ChannelPipeline中所有的ChannelHandler名字或者所有的ChannelHandler</td>
+</tr>
+</tbody>
+</table>
+<h4 id="6-2-2_触发事件">6.2.2  触发事件</h4><p>ChannelPipeline API 也暴露了调用出站和入站动作的方法。表6.8 罗列了入站的动作，它通知ChannelHandler发生在ChannelPipeline中的事件.</p>
+<h5 id="表_6-8_ChannelPipeline的入站事件">表 6.8 ChannelPipeline的入站事件</h5><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fireChannelRegistered</td>
+<td>调用ChannelPipeline中下一个ChannelInboundHandler中的channelRegistered(ChannelHandlerContext)</td>
+</tr>
+<tr>
+<td>fireChannelUnregistered</td>
+<td>调用ChannelPipeline中的下一个ChannelInboundHander中的channelUnregistered(ChannelHandlerContext)</td>
+</tr>
+<tr>
+<td>fireChannelActive</td>
+<td>调用ChannelPipeline中的下一个ChannelInboundHander中的channelActive(ChannelHandlerContext)</td>
+</tr>
+<tr>
+<td>fireChannelInactive</td>
+<td>调用ChannelPipeline中的下一个ChannelInboundHander中的channelInactive(ChannelHandlerContext)</td>
+</tr>
+<tr>
+<td>fireExceptionCaught</td>
+<td>调用ChannelPipeline中的下一个ChannelInboundHander中的cexceptionCaught（ChannelHandlerContext，Throwable)</td>
+</tr>
+<tr>
+<td>fireUserEventTriggered</td>
+<td>调用ChannelPipeline中的下一个ChannelInboundHander中的userEventTriggered(ChannelHandlerContext, Object)</td>
+</tr>
+<tr>
+<td>fireChannelRead</td>
+<td>调用ChannelPipeline中的下一个ChannelInboundHander中的channelRead(ChannelHandlerContext, Object)</td>
+</tr>
+<tr>
+<td>fireChannelReadComplete</td>
+<td>调用ChannelPipeline中的下一个ChannelStateHandler中的channelReadComplete(ChannelHandlerContext)</td>
+</tr>
+</tbody>
+</table>
+<p>从出站方面看，处理事件可能会在底层Socket上做些动作。表6.9 罗列了ChannelPipeline API 出站的动作,</p>
+<h5 id="表_6-9_ChannelPipeline的出站动作">表 6.9 ChannelPipeline的出站动作</h5><table>
+<thead>
+<tr>
+<th><em>方法名</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ChannelFuture bind(SocketAddress)</td>
+<td>绑定Channel到指定SocketAddress，这个动作完成的时候(不管成功或者失败)将会通知ChannelFuture.这个将会调用在ChannelPipeline中下一个ChannelOutboundHandler中的bind(ChannelHandlerContext, SocketAddress, ChannelPromise)方法</td>
+</tr>
+<tr>
+<td>ChannelFuture connect(SocketAddress)</td>
+<td>连接到指定的远端地址SocketAddress，这个将会调用在ChannelPipeline中下一个ChannelOutboundHandler中的connect(ChannelHandlerContext, SocketAddress,ChannelPromise)方法</td>
+</tr>
+<tr>
+<td>ChannelFuture disconnect()</td>
+<td>从远端断开. 这个将会调用在ChannelPipeline中下一个ChannelOutboundHandler中的disconnect(ChannelHandlerContext, ChannelPromise) 方法</td>
+</tr>
+<tr>
+<td>ChannelFuture close()</td>
+<td>关闭Channel,这个将会调用在ChannelPipeline中下一个ChannelOutboundHandler中的close(ChannelHandlerContext, ChannelPromise) 方法</td>
+</tr>
+<tr>
+<td>ChannelFuture deregister()</td>
+<td>从EventExecutor(即EventLoop)中注销该Channel，这个将会调用在ChannelPipeline中下一个ChannelOutboundHandler中的deregister(ChannelHandlerContext, ChannelPromise) 方法</td>
+</tr>
+<tr>
+<td>ChannelPipeline flush()</td>
+<td>刷入所有在当前Channel挂起的写入，这个将会调用在ChannelPipeline中下一个ChannelOutboundHandler中的flush(ChannelHandlerContext) 方法</td>
+</tr>
+<tr>
+<td>ChannelFuture write(Object,ChannelPormise), write(Object)</td>
+<td>写入消息到Channel中. 这个将会调用在ChannelPipeline中下一个ChannelOutboundHandler中的write(ChannelHandlerContext, Object msg, ChannelPromise)方法.这个方法不会直接写入到Socket中,而是写入到缓冲中，在调用flush()或者writeAndFlush()将会写入到Socket中</td>
+</tr>
+<tr>
+<td>ChannelFuture read()</td>
+<td>请求读取更多数据，触发一个ChannelInboundHandler.channelRead(ChannelHandlerContext,Object)事件，如果数据已经被读取，将会触发ChannelInboundHandler#channelReadComplete(ChannelHandlerContext) 事件，所以Handler可以决定是否继续读. 如果已经有读取动作正在进行或者挂起，这个方法将不做任何动作。这个将会调用在ChannelPipeline中下一个ChannelOutboundHandler中的read(ChannelHandlerContext)方法</td>
+</tr>
+</tbody>
+</table>
+<p>总结一下，本小节里的概念：</p>
+<ul>
+<li>一个ChannelPipeline保留了一些列ChannelHandler实例，并且只和一个Channel关联。</li>
+<li>一个ChannelPipeline可以动态的更改、添加ChannelHandler。</li>
+<li>ChannelPipeline提供了响应出站和入站事件丰富的API接口。</li>
+</ul>
+<h3 id="6-3_ChannelHandlerContext">6.3 ChannelHandlerContext</h3><pre><code>ChannelHandlerContext接口表示了ChannelPipeline和ChannelHandler之间的关联，只要一个ChannelHandler被添加到ChannelPipeline中时候，
+一个ChannelHandlerContext实例将被创建。ChannelHandlerConext的主要功能是管理在同一个ChannelPipeline中各个ChannelHandler的相互交互。
+ChannelHandlerContext定义了一些列的方法，其中有些是和Channel,ChannelPipeline中一些方法重叠。然而，如果在Channel和ChannelPipeline中调用这些方法，这些方法的调用会传递过整个pipeline。但是如果这些方法在ChannelHandlerContext中调用的话，这些方法仅在当前分配的ChannelHandler开始传播到下一个ChannnelHandler为止。
+ChannelHandlerContext的API罗列在表<span class="number">6.10</span>
+</code></pre><h5 id="表6-10_ChannelHandlerContext_API">表6.10 ChannelHandlerContext API</h5><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bind</td>
+<td>请求bind到指定的SocketAddress，返回ChannelFuture</td>
+</tr>
+<tr>
+<td>channel</td>
+<td>返回绑定到这个实例上的Channel</td>
+</tr>
+<tr>
+<td>close</td>
+<td>请求关闭Channel，返回ChannelFuture</td>
+</tr>
+<tr>
+<td>connect</td>
+<td>请求连接到指定的SocketAddress，返回ChannelFuture</td>
+</tr>
+<tr>
+<td>deregister</td>
+<td>请求从上次注册的EventExecutor(EventLoop)中注销，返回ChannelFuture</td>
+</tr>
+<tr>
+<td>disconnect</td>
+<td>请求从远端断开连接，返回ChannelFuture</td>
+</tr>
+<tr>
+<td>executor</td>
+<td>返回 EventExecutor(EventLoop).</td>
+</tr>
+<tr>
+<td>fireChannelActive</td>
+<td>一个 Channel已经激活(连接上).将会调用Channel中ChannelPipeline里的下一个ChannelInboundHandler里的ChannelActive方法</td>
+</tr>
+<tr>
+<td>fireChannelInactive</td>
+<td>一个 Channel 已经关闭.</td>
+</tr>
+<tr>
+<td>fireChannelRead</td>
+<td>一个 Channel 收到一个消息.</td>
+</tr>
+<tr>
+<td>fireChannelReadComplete</td>
+<td>触发一个channelWritabilityChanged 事件到下一个 ChannelInboundHandler.</td>
+</tr>
+<tr>
+<td>handler</td>
+<td>返回绑定到当前Context中的Handler.</td>
+</tr>
+<tr>
+<td>isRemoved</td>
+<td>如果当前所属的ChannelHandler已经从ChannelPipeline中移除，返回真</td>
+</tr>
+<tr>
+<td>name</td>
+<td>返回当前实例的唯一名字</td>
+</tr>
+<tr>
+<td>pipeline</td>
+<td>返回当前的ChannelPipeline</td>
+</tr>
+<tr>
+<td>read</td>
+<td>请求从Channel中读取数据到第一个Inbound缓冲。如果成功，触发一个ChannelInboundHandler.channelRead(ChannelHandlerContext,Object)事件，如果数据已经被读取，将会触发ChannelInboundHandler#channelReadComplete(ChannelHandlerContext) 事件，所以Handler可以决定是否继续读. 如果已经有读取动作正在进行或者挂起，这个方法将不做任何动作。这个将会调用在ChannelPipeline中下一个ChannelOutboundHandler中的read(ChannelHandlerContext)方法</td>
+</tr>
+<tr>
+<td>write</td>
+<td>通过当前实例，请求写入消息</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><em>注意事项</em><br>ChannelHandlerContext 关联了一个ChannelHandler之后就不会改变，所以在里面缓存一个引用是安全的.<br>就像我们前面提到的一样，ChannelHandlerContext methods involve a shorter event flow than the same methods available on other classes. This should be exploited where possible to provide the best performance.</p>
+</blockquote>
+<h4 id="6-3-1_使用_ChannelHandler">6.3.1  使用 ChannelHandler</h4><p> 在这个小节里，我们举例说明了如何使用ChannelHandlerContext和Channel，ChannelPipeline的一些方法。如图6.3所示，它展示它们之间的关系：</p>
+<h5 id="图6-3_Channel,Handler,Pipeline，Context关系图">图6.3 Channel,Handler,Pipeline，Context关系图</h5><p><img src="/blog/img/63channle-pipeline-context.png" alt="Channel,Handler,Pipeline关系图"></p>
+<ol>
+<li>Channel 绑定到 ChannelPipeline</li>
+<li>绑定了Channel的ChannelPipeline包含了ChannelHandlers</li>
+<li>ChannelHandler</li>
+<li>添加ChannelHandler到ChannelPipeline的时候，一个ChannelHandlerContext就被创建了.</li>
+</ol>
+<p>在源码 6.6中，我们从ChannelHandlerContext中获取了一个Channel引用，调用了Channel.write()，引起一个写事件在整个ChannelPipeline中流动。</p>
+<h5 id="源码_6-6_从ChannelHandlerContext中获取channel">源码 6.6 从ChannelHandlerContext中获取channel</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ChannelHandlerContext ctx = ..;</span><br><span class="line">Channel channel = ctx.channel(); <span class="comment">// 获取Channel</span></span><br><span class="line">channel.write(Unpooled.copiedBuffer(<span class="string">"Netty in Action"</span>,CharsetUtil.UTF_8));<span class="comment">//写入数据</span></span><br></pre></td></tr></table></figure>
+<h5 id="源码6-7_从ChannelHandlerContext中获取ChannelPipeline">源码6.7 从ChannelHandlerContext中获取ChannelPipeline</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ChannelHandlerContext ctx = ..;</span><br><span class="line">ChannelPipeline pipeline = ctx.pipeline(); <span class="comment">//获取Pipeline</span></span><br><span class="line">pipeline.write(Unpooled.copiedBuffer(<span class="string">"Netty in Action"</span>,CharsetUtil.UTF_8));<span class="comment">//写入数据</span></span><br></pre></td></tr></table></figure>
+<p>在源码6.7和6.8中的处理流程是一样的如下图所示,很重要需要记住的就是，通过Channel和ChannelPipeline接口调用的write()方法将会传递到整个Pipeline.如果需要在ChannelHandler级别流动，那么需要调用ChannelHandlerContext中的方法</p>
+<h5 id="图6-4_事件流动示例图">图6.4 事件流动示例图</h5><p><img src="/blog/img/63pipeline-flow.png" alt="事件流动示例图"></p>
+<ol>
+<li>事件传递到ChannelPipeline中的第一个ChannelHandler。</li>
+<li>ChannelHandler 使用ChannelHandlerContext传递事件到ChannelPipeline中下一个ChannelHandler</li>
+<li>ChannelHandler 使用ChannelHandlerContext传递事件到ChannelPipeline中下一个ChannelHandler</li>
+</ol>
+<p>为什么需要从ChannelPipeline中的某个点开始传播事件？</p>
+<ul>
+<li>减少传递事件通过整个Pipeline的开销，有些ChannelHandler对某些事件不需要处理</li>
+<li>to exclude processing by specific handlers that would be interested in it</li>
+</ul>
+<p>如上所述，如需从某个特定ChannelHander开始执行，你必须从ChannelPipeline中前一个ChannelHandler的ChannelHandlerContext调用方法，就可以完成这个能力。<br>源码 6.8 和图 6.5 表示了这个使用方式，</p>
+<h5 id="源码_6-8_ChannelHandlerContext发起的事件">源码 6.8 ChannelHandlerContext发起的事件</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ChannelHandlerContext ctx = ..; <span class="comment">//获取Context</span></span><br><span class="line">ctx.write(Unpooled.copiedBuffer(<span class="string">"Netty in Action"</span>, CharsetUtil.UTF_8)); <span class="comment">//通过Context写入数据</span></span><br></pre></td></tr></table></figure>
+<h5 id="图_6-5_使用ChannelHandlerContext的传播事件">图 6.5 使用ChannelHandlerContext的传播事件</h5><p><img src="/blog/img/65context-flow.png" alt="6.5Context事件流动示例图"></p>
+<ol>
+<li>ChannelHandlerContext中的方法write()被调用</li>
+<li>write事件被传递到下一个ChannelHandler</li>
+<li>write事件从ChannelPipeline中移除.</li>
+</ol>
+<p>这个使用场景在需要特定的ChannelHandler实现中是通用做法。</p>
+<h4 id="6-3-2_ChannelHandler_和ChannelHandlerContext_高级用法">6.3.2 ChannelHandler 和ChannelHandlerContext 高级用法</h4><p> 就像在源码6.6中所看到的，可以调用ChannelHandlerContext的pipelin()方法获取ChannelPipeline实例。这个时候就可以在运行时候处理ChannelPipeline中的ChannelHandler.<br> 也可以来处理一些复杂的需求，如添加一个ChannelHandler到ChannelPipeline来处理动态协议改变。</p>
+<p>另外一个高级的用法就是，可以保存一个ChannelHandlerContext引用，放在以后使用。甚至可以是在ChannelHandler的外面或者不一样的线程中执行。</p>
+<h5 id="源码_6-9_ChannelHandlerContext_使用">源码 6.9 ChannelHandlerContext 使用</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WriteHandler</span> <span class="keyword">extends</span> <span class="title">ChannelHandlerAdapter</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> ChannelHandlerContext ctx;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handlerAdded</span><span class="params">(ChannelHandlerContext ctx)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.ctx = ctx; <span class="comment">//保存ChnnelHandlerContext引用，放在以后使用</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">send</span><span class="params">(String msg)</span> </span>&#123; <span class="comment">// 使用以前保存的ChannelHandlerContext应用写入消息</span></span><br><span class="line">        ctx.write(msg);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>一个ChannelHandler可以属于多个ChannelPipeline，它也绑定了多个ChannelHandlerContext实例。这个时候我们需要给这个Handler标注为Shareable。<br>否则添加到多个ChannelPipeline中会引发异常。这个时候ChannelHander的设计必须是线程安全的，而且能够在多个Channel(即连接connection)中安全使用</p>
+<h5 id="源码_6-10_可分享的_ChannelHandler">源码 6.10 可分享的 ChannelHandler</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Sharable</span> <span class="comment">//使用Shareable标注</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SharableHandler</span> <span class="keyword">extends</span> <span class="title">ChannelInboundHandlerAdapter</span> </span>&#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead</span><span class="params">(ChannelHandlerContext ctx, Object msg)</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Channel read message "</span>  + msg);<span class="comment">//打印msg</span></span><br><span class="line">        ctx.fireChannelRead(msg); <span class="comment">//转发到下一个ChannelHandler的ChannelRead方法</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>源码6.10 中的ChannelHandler的实现满足在多个ChannelPipeline中使用的需求，它使用@Shareable标注，并没有保存任何状态.源码6.11则展示了一个错误的用法。</p>
+<h5 id="源码_6-11_错误使用_@Sharable">源码 6.11 错误使用 @Sharable</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Sharable</span> <span class="comment">//使用@Shareable标注</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ErrorsharableHandler</span> <span class="keyword">extends</span> <span class="title">ChannelInboundHandlerAdapter</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> count;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead</span><span class="params">(ChannelHandlerContext ctx, Object msg)</span> </span>&#123;</span><br><span class="line">        count++; <span class="comment">//增加count</span></span><br><span class="line">        System.out.println(<span class="string">"channelRead(...) called the"</span> + count + <span class="string">"times"</span>); <span class="comment">//打印次数</span></span><br><span class="line">        ctx.fireChannelRead(msg();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>显然上面的code中包含了状态信息，一个实例变量保存了方法的调用次数。添加这个Handler倒Pipeline中显然会计算错误。我们可以简单的将count变量改为AtomicInteger或者把ChannelRead方法改为synchronized.</p>
+<blockquote>
+<h5 id="为什么需要共享ChannelHandler？">为什么需要共享ChannelHandler？</h5><p>以一个通用的原因就是，有很多时候需要一些通用的Handler来处理类似的事情，如为跨越多个Channel添加一个收集信息的ChannelHandler等.</p>
+</blockquote>
+<h3 id="6-4_Summary">6.4  Summary</h3><p>这个章节深入的探讨了Netty的数据处理组件,ChannelHandler。我们讨论了这些ChannelHandler是如何被串在一起，它是如何作为ChannelInboundHandlers和ChannelOutboundHandlers在ChannelPipeline中相互交互的。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/blog/tags/Netty/">Netty</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://iamleaf.github.io/2015/10/10/6-handler/" data-title="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline | leaf&#39;s blog" data-tsina="null" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/blog/2015/10/10/5-buffer/" title="Netty, 第五章 缓冲区--Buffer">
+  <strong>上一篇：</strong><br/>
+  <span>
+  Netty, 第五章 缓冲区--Buffer</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/blog/2015/10/10/7-codec/"  title="Netty, 第七章 Codec框架">
+ <strong>下一篇：</strong><br/> 
+ <span>Netty, 第七章 Codec框架
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/10/10/6-handler/" data-title="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline" data-url="http://iamleaf.github.io/2015/10/10/6-handler/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+
+
+  
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/blog/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=null&verifier=&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> Hello ,This is Leaf from Oracle. <br/>
+			Java,Application Server,Concurrent programming,Networking</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1411345590" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a>  © 2015 
+		
+		<a href="/blog/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/blog/js/jquery-2.0.3.min.js"></script>
+<script src="/blog/js/jquery.imagesloaded.min.js"></script>
+<script src="/blog/js/gallery.js"></script>
+<script src="/blog/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"iamleaf"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3Fe6d1f421bbc9962127a50488f9ed37d1' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/blog/img/scrollup.png"/></a>
+	</div>
+	<script src="/blog/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

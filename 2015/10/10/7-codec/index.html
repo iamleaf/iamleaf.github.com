@@ -1,0 +1,640 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Netty, 第七章 Codec框架 | leaf&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Leaf Ye">
+    
+
+    
+    <meta name="description" content="Netty CodeC 框架本章节主要介绍：
+
+Decoders
+Encoders
+Codecs
+
+在前面的章节中，我们讨论了通过不同的方式在处理流程中使用Handler拦截动作和数据，通过使用ChannelHandler和它的相关类可以实现大多数的应用逻辑。但是标准的架构上通常有特定的框架，一些通用的处理过程将被抽象成特定的实现，它可以节省大量的开发时间。在本章中，我们会学习编码(encodng">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty, 第七章 Codec框架">
+<meta property="og:url" content="http://iamleaf.github.io/2015/10/10/7-codec/index.html">
+<meta property="og:site_name" content="leaf's blog">
+<meta property="og:description" content="Netty CodeC 框架本章节主要介绍：
+
+Decoders
+Encoders
+Codecs
+
+在前面的章节中，我们讨论了通过不同的方式在处理流程中使用Handler拦截动作和数据，通过使用ChannelHandler和它的相关类可以实现大多数的应用逻辑。但是标准的架构上通常有特定的框架，一些通用的处理过程将被抽象成特定的实现，它可以节省大量的开发时间。在本章中，我们会学习编码(encodng">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/71toint.png">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/72inttostr.png">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/73shorttoByteencoder.png">
+<meta property="og:updated_time" content="2015-10-11T06:14:14.510Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Netty, 第七章 Codec框架">
+<meta name="twitter:description" content="Netty CodeC 框架本章节主要介绍：
+
+Decoders
+Encoders
+Codecs
+
+在前面的章节中，我们讨论了通过不同的方式在处理流程中使用Handler拦截动作和数据，通过使用ChannelHandler和它的相关类可以实现大多数的应用逻辑。但是标准的架构上通常有特定的框架，一些通用的处理过程将被抽象成特定的实现，它可以节省大量的开发时间。在本章中，我们会学习编码(encodng">
+
+    
+    
+    <link rel="icon" href="/blog/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/blog/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/blog/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="../../../../css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/blog/"><img src="/blog/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/blog/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
+				<h2 class="blog-motto">宁静致远</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/blog/">Home</a></li>
+					
+						<li><a href="/blog/archives">Archives</a></li>
+					
+						<li><a href="/blog/about">About</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:iamleaf.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/blog/2015/10/10/7-codec/" title="Netty, 第七章 Codec框架" itemprop="url">Netty, 第七章 Codec框架</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/blog/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
+		
+  <p class="article-time">
+    <time datetime="2015-10-10T09:06:08.000Z" itemprop="datePublished"> 发表于 2015-10-10</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Netty_CodeC_框架"><span class="toc-text">Netty CodeC 框架</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1_什么是_Codec?"><span class="toc-text">7.1  什么是 Codec?</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2_Decoders–解码器"><span class="toc-text">7.2  Decoders–解码器</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#7-2-1_ByteToMessageDecoder"><span class="toc-text">7.2.1  ByteToMessageDecoder</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_7-1_ByteToMessageDecoder_API"><span class="toc-text">表 7.1 ByteToMessageDecoder API</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#ToIntegerDecoder整数解码器示意图"><span class="toc-text">ToIntegerDecoder整数解码器示意图</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_7-1_使用_ByteToMessageDecoder_that_decodes_to_Integer"><span class="toc-text">源码 7.1 使用 ByteToMessageDecoder that decodes to Integer</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Reference_Counting_in_Codecs"><span class="toc-text">Reference Counting in Codecs</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-2-2_ReplayingDecoder"><span class="toc-text">7.2.2  ReplayingDecoder</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#更多的解码器"><span class="toc-text">更多的解码器</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-2-3_MessageToMessageDecoder"><span class="toc-text">7.2.3  MessageToMessageDecoder</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_7-2_MessageToMessageDecoder_API"><span class="toc-text">表 7.2 MessageToMessageDecoder API</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_7-3_MessageToMessageDecoder_-_Integer_to_String"><span class="toc-text">源码 7.3 MessageToMessageDecoder - Integer to String</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-2-4_解码时候如何处理过长的帧(Frame)"><span class="toc-text">7.2.4  解码时候如何处理过长的帧(Frame)</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_7-4_安全的ByteToMessageDecoder"><span class="toc-text">源码 7.4 安全的ByteToMessageDecoder</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3_Encoders"><span class="toc-text">7.3  Encoders</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#7-3-1_MessageToByteEncoder"><span class="toc-text">7.3.1  MessageToByteEncoder</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_7-3_MessageToByteEncoder_API"><span class="toc-text">表 7.3 MessageToByteEncoder API</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#图7-3_ShortToByteEncoder的流程"><span class="toc-text">图7.3 ShortToByteEncoder的流程</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-5"><span class="toc-text">源码7.5</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-3-2_MessageToMessageEncoder"><span class="toc-text">7.3.2  MessageToMessageEncoder</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4_抽象Codec类"><span class="toc-text">7.4  抽象Codec类</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#7-4-1_ByteToMessageCodec"><span class="toc-text">7.4.1  ByteToMessageCodec</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_7-5_ByteToMessageCodec_API"><span class="toc-text">表 7.5 ByteToMessageCodec API</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-4-2_MessageToMessageCodec"><span class="toc-text">7.4.2  MessageToMessageCodec</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-7_MessageToMessageCodec"><span class="toc-text">源码7.7 MessageToMessageCodec</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-4-3_CombinedChannelDuplexHandler"><span class="toc-text">7.4.3  CombinedChannelDuplexHandler</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-8_ByteToCharDecoder"><span class="toc-text">源码7.8 ByteToCharDecoder</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-9_CharToByteEncoder"><span class="toc-text">源码7.9 CharToByteEncoder</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-10_CombinedByteCharCodec"><span class="toc-text">源码7.10 CombinedByteCharCodec</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-5_总结"><span class="toc-text">7.5  总结</span></a></li></ol></li></ol>
+		
+		</div>
+		
+		<h2 id="Netty_CodeC_框架">Netty CodeC 框架</h2><p>本章节主要介绍：</p>
+<ul>
+<li>Decoders</li>
+<li>Encoders</li>
+<li>Codecs</li>
+</ul>
+<p>在前面的章节中，我们讨论了通过不同的方式在处理流程中使用Handler拦截动作和数据，通过使用ChannelHandler和它的相关类可以实现大多数的应用逻辑。<br>但是标准的架构上通常有特定的框架，一些通用的处理过程将被抽象成特定的实现，它可以节省大量的开发时间。<br>在本章中，我们会学习编码(encodng)和解码(decoding)–把数据从一种协议格式转化为另一种格式.这个处理过程通常是由”codec”组件完成的。<br>Netty为众多的协议提供了直观地编写codec的组件。如，你正在使用Netty构建一个邮件服务器,那么你会发现这些codec工具对你来实现POP3,IMAP,SMTP协议非常有用。</p>
+<h3 id="7-1_什么是_Codec?">7.1  什么是 Codec?</h3><p>所有基于网络的应用，都必须定义客户端和服务端的之间交换数据的格式。即在它们之间原始字节数据是如何被解析和转换成目标程序的格式的。<br>这个数据转化逻辑在Netty中就被称为Codec. 它包含了一个解码器–decoder和一个编码器–encoder。解码器和编码器都是把字节码转化为另一种格式。<br>我们如何区分呢？<br>设想一下，消息对一个特定应用而言就是一种结构化的、连续的字节数据，对本应用而言是认识的，有意义的。称之为”数据”.<br>编码器就是一种组件，把消息转化为合适传输的格式(大多数时候是字节流).然而对应的解码器就是把编码过后的数据解码成应用程序所认知的数据格式。</p>
+<p>我们来看一下Netty中实现codec的类,</p>
+<h3 id="7-2_Decoders–解码器">7.2  Decoders–解码器</h3><p>本小节里，我们将学习提供解码器实现的类并且提供些具体的例子展示什么时候、如何使用它们。</p>
+<p>Netty提供了丰富的抽象类来简化编写解码器，这些类主要包含两种不同的使用场景:</p>
+<ul>
+<li>从字节解码到消息(ByteToMessageDecoder and ReplayingDecoder)</li>
+<li>从消息解码到消息(MessageToMessageDecoder)</li>
+</ul>
+<p>就像我们说过的一样，解码器的作用是把入站数据从一种格式转换为另一种格式。所以你不难理解其实Netty解码器就是ChannelInboundHandler的抽象实现。<br>什么时候使用解码器呢？很简单，只要你需要为下一个ChannelInboundHander转换入站数据时候。然而你可以把多个解码器在ChannelPipeline中串接在一起来实现处理逻辑。</p>
+<h4 id="7-2-1_ByteToMessageDecoder">7.2.1  ByteToMessageDecoder</h4><p>Netty提供了一个基础抽象类ByteToMessageDecoder,来提供从字节解码到消息(或者另一种顺序的字节)转换的通用功能。<br>你还不知道是否一次就能收到完整的数据，所以在这个类中缓冲入站数据是很有必要的。表7.1 展示了两个重要的方法</p>
+<h5 id="表_7-1_ByteToMessageDecoder_API">表 7.1 ByteToMessageDecoder API</h5><table>
+<thead>
+<tr>
+<th><em>方法名</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>decode(ChannelHandlerContext ctx, ByteBuf in, List<object> out)</object></td>
+<td>这个是你必须要实现的唯一的抽象方法。入站字节数据存放在ByteBuf中，解码后的消息被添加到List中。decode()将会直到ByteBuf中的数据被读完返回，List数据会被转发给下一个ChannelHandler。</td>
+</tr>
+<tr>
+<td>decodeLast</td>
+<td>这个方法将会在Channel状态变为不活跃(inactive)最后一次调用</td>
+</tr>
+</tbody>
+</table>
+<p>Suppose we receive a byte stream containing simple integers, each to be handled separately.<br>In this case we will read each integer from the inbound ByteBuf and pass it to the next<br>ChannelInboundHandler in the pipeline. To “decode” the byte stream into integers we will<br>extend ByteToMessageDecoder. The implementation class, “ToIntegerDecoder”, is shown in<br>Figure 7.1.</p>
+<p>假设我们收到一个包含了简单整数(Integer)的字节流，每个整数都会被单独处理。在这个场景里我们从入站ByteBuf中读取每个整数，并且把它传递给下一个ChannelInboundHandler。<br>为了实现这个转换，我们通过扩展了ByteToMessageDecoder类实现了ToIntegerDecoder整数解码器。如图7.1所示,</p>
+<h5 id="ToIntegerDecoder整数解码器示意图">ToIntegerDecoder整数解码器示意图</h5><p><img src="/blog/img/71toint.png" alt="7.1 ToIntegerDecoder整数解码器 "></p>
+<p>从入站ByteBuf中一次读取4个字节，转化为整数，并且添加到List中。List将会被送到下一个ChannelInboundHandler里.如源码 7.1 所示.</p>
+<h5 id="源码_7-1_使用_ByteToMessageDecoder_that_decodes_to_Integer">源码 7.1 使用 ByteToMessageDecoder that decodes to Integer</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ToIntegerDecoder</span> <span class="keyword">extends</span> <span class="title">ByteToMessageDecoder</span> </span>&#123; <span class="comment">//扩展ByteToMessageDecoder</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">decode</span><span class="params">(ChannelHandlerContext ctx, ByteBuf in, List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (in.readableBytes() &gt;= <span class="number">4</span>) &#123; <span class="comment">//检查是否可读字节长度大于4，Integer是4个字节长</span></span><br><span class="line">        out.add(in.readInt()); <span class="comment">//从ByteBuf中读取整数，添加到List中</span></span><br><span class="line">    &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>尽管ByteToMessageDecoder抽象类简化编写ToIntegerDeocder，你可能发现每次读取需要检查入站的ByteBuf中是否有足够的数据会有点烦。<br>在下面的小节中我们会使用ReplayingDeocder来消除这个烦恼.</p>
+<blockquote>
+<h5 id="Reference_Counting_in_Codecs">Reference Counting in Codecs</h5><p>和我们在第5第6章提到的一样，对于reference counting需要特殊对待。对于编码器和解码器而言这个过程也是很简单。<br>当一个消息被编码或者解码之后，它会在调用ReferenceCountUtil.release(message)之后自动释放. 如果你不希望这个消息立马被释放，<br>那么你可以调用ReferenceCountUtil.retain(message)，这个方法会增加引用计数，阻止消息被回收。</p>
+</blockquote>
+<h4 id="7-2-2_ReplayingDecoder">7.2.2  ReplayingDecoder</h4><p>ReplayingDecoder是一种特殊的为byte-to-message类型解码而设计的抽象基类，它消除了需要调用readableBytes()地方。<br>它是通过包装ByteBuf类的方式实现这个检查。如果没有足够的数据在ByteBuf中，那么解码的循环过程将会中断。</p>
+<p>需要提醒的是ReplayingDecoder中使用的ByteBuf包装类的一些需要注意的地方：</p>
+<ul>
+<li>不是所有的ByteBuf的操作都支持，如果不支持的方法被调用会抛出UnreplayableOperationException异常。</li>
+<li>ReplayingDecoder 明显比ByteToMessageDecoder慢<br>如果上面的两个缺陷都可以接受的话，使用ReplayingDecoder是一个选择。这里有个简单的规则来选择使用ByteToMessageDecoder还是ReplayingDecoder，<br>如果使用ByteToMessageDecoder没有带来过多的复杂性，那么就使用ByteToMessageDecoder，否则使用ReplayingDecoder。</li>
+</ul>
+<p>如果上面的例子用ReplayingDecode实现的话，如下所示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ToIntegerDecoderWithoutCheck</span> <span class="keyword">extends</span> <span class="title">ReplayingDecoder</span>&lt;<span class="title">Void</span>&gt; </span>&#123; <span class="comment">//扩展ReplayingDecoder</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">decode</span><span class="params">(ChannelHandlerContext ctx, ByteBuf in, List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            out.add(in.readInt()); <span class="comment">//从ByteBuf中读取整数，添加到List中。无需检查是否有足够的数据</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果在ByteBuf in中没有足够的字节数据，那么将会抛出异常，而这个异常会被ReplayDecoder捕获。一旦更多的数据到达ByteBuf，那么decoder方法会被调用。<br>如果数据足够，解码的数据会被加到List中</p>
+<blockquote>
+<h5 id="更多的解码器">更多的解码器</h5><p> 如下的解码器处理更复杂些的例子.</p>
+<ul>
+<li>io.netty.handler.codec.LineBasedFrameDecoder. 在Netty内部使用，可以一行一行的处理数据.即按照换行符解析数据(“\n” or “\r\n”).</li>
+<li>io.netty.handler.codec.http.HttpObjectDecoder, HTTP 数据解码器.<br>Netty 提供了一大堆的有用的解码器</li>
+</ul>
+</blockquote>
+<p>下面的例子使用EmbeddedChannel测试LineBasedFrameDecoder.1处表示如果使用这种数据格式的话，结果应该如2处所示.<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testDecodeWithStrip</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    EmbeddedChannel ch = <span class="keyword">new</span> EmbeddedChannel(<span class="keyword">new</span> LineBasedFrameDecoder(<span class="number">8192</span>, <span class="keyword">true</span>, <span class="keyword">false</span>));</span><br><span class="line"></span><br><span class="line">    ch.writeInbound(copiedBuffer(<span class="string">"first\r\nsecond\nthird\n"</span>, CharsetUtil.US_ASCII));</span><br><span class="line">    <span class="comment">//ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));  //1</span></span><br><span class="line">    assertEquals(<span class="string">"first"</span>, releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));</span><br><span class="line">    assertEquals(<span class="string">"second"</span>, releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));</span><br><span class="line">    assertEquals(<span class="string">"third"</span>, releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));</span><br><span class="line">    <span class="comment">//assertNull(ch.readInbound()); //2</span></span><br><span class="line">    ch.finish();</span><br><span class="line"></span><br><span class="line">    ReferenceCountUtil.release(ch.readInbound());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="7-2-3_MessageToMessageDecoder">7.2.3  MessageToMessageDecoder</h4><p>这个小节里，我们讨论如何使用抽象基类MessageToMessageDecoder解码一种消息到另一种消息格式.如POJO到POJO。表 7.2 罗列了方法，</p>
+<h5 id="表_7-2_MessageToMessageDecoder_API">表 7.2 MessageToMessageDecoder API</h5><table>
+<thead>
+<tr>
+<th><em>方法名</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>decode(ChannelHandlerContext ctx, I msg, List<object> out)</object></td>
+<td>这个是你必须要实现的唯一的抽象方法。每次入站消息需要被解码成另一种格式时候被调用，解码后的消息被添加到List中。List数据会被转发给下一个ChannelHandler。</td>
+</tr>
+<tr>
+<td>decodeLast</td>
+<td>这个方法将会在Channel状态变为不活跃(inactive)最后一次调用</td>
+</tr>
+</tbody>
+</table>
+<p>举个例子，我们现在有这个需求，我们期望在Channel中把整数(Integer)解码成字符串(String).现在我们应该很快就能想出，使用Netty可重用的组件设计，<br>我们在ChannelPipeline中添加这个解码器(由于解码器继承了ChannelHandler)就可以了。为了实现这个解码，我们编写了一个IntegerToStringDecoder类，它继承了MessageToMessageDecoder。<br>由于这个是泛型化的类所以我们的类的样子应该是这样的</p>
+<blockquote>
+<p>public class IntegerToStringDecoder extends MessageToMessageDecoder<integer></integer></p>
+</blockquote>
+<p>相应的decode方法的样子应该是这样的：</p>
+<blockquote>
+<p>protected void decode( ChannelHandlerContext ctx,Integer msg, List<object> out ) throws Exception</object></p>
+</blockquote>
+<p>传入解码decode方法的参数不在是ByteBuf(因为已经在前一个例子中解码过了)，而是整数-Integer. 如下图所示，解码后的字符会被转发到下一个ChannelInboundHander中，</p>
+<p>#####图 7.2.整数解码到字符过程</p>
+<p><img src="/blog/img/72inttostr.png" alt="72整数解码到字符"></p>
+<p>完整的源码如下：</p>
+<h5 id="源码_7-3_MessageToMessageDecoder_-_Integer_to_String">源码 7.3 MessageToMessageDecoder - Integer to String</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IntegerToStringDecoder</span> <span class="keyword">extends</span>  <span class="title">MessageToMessageDecoder</span>&lt;<span class="title">Integer</span>&gt; </span>&#123; <span class="comment">//继承抽象类</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">decode</span><span class="params">(ChannelHandlerContext ctx, Integer msg  List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        out.add(String.valueOf(msg)); <span class="comment">//转成字符格式</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="7-2-4_解码时候如何处理过长的帧(Frame)">7.2.4  解码时候如何处理过长的帧(Frame)</h4><p>Netty是一个异步的网络编程框架，那么它需要在内存缓冲字节数据直到你可以去解码这些数据，然而内存总是有限的，<br>所有一个良好的设计必须考虑到如何处理这种共同的问题。Netty提供了一个通用的帧过长的异常TooLongFrameException来处理这个问题,<br>可以在解码器中设置一个最大的字节限额，如果超出这个限额那么就抛出TooLongFrameException.然后就由解码器的编写者决定如何处理它。<br>在某些协议中，如HTTP遇到这种情况可以给对方发一种特殊响应HTTP RESPONSE。有些协议可能没有这个支持，那么这个时候的选择可能是直接关闭这个连接。</p>
+<p>源码7.4中罗列了使用TooLongFrameException通知其他ChannelHandler处理的例子</p>
+<h5 id="源码_7-4_安全的ByteToMessageDecoder">源码 7.4 安全的ByteToMessageDecoder</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SafeByteToMessageDecoder</span> <span class="keyword">extends</span> <span class="title">ByteToMessageDecoder</span> </span>&#123; <span class="comment">//继承抽象基类</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> MAX_FRAME_SIZE = <span class="number">1024</span>; <span class="comment">//设置最大限额</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">decode</span><span class="params">(ChannelHandlerContext ctx, ByteBuf in,  List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> readable = in.readableBytes();</span><br><span class="line">    <span class="keyword">if</span> (readable &gt; MAX_FRAME_SIZE) &#123; <span class="comment">//如果已经大于最大限额</span></span><br><span class="line">        in.skipBytes(readable); <span class="comment">//忽略所有读取的字节，并且抛出异常</span></span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> TooLongFrameException(Frame too big!);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//正常的处理</span></span><br><span class="line">    ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>This kind of protection is especially important if you decode a protocol that has a variable<br>frame size.<br>这种类型的保护在解码一些可变Frame大小协议的时候是很有用。<br>这里我们解释了解码的用法和基础类。下面我们会讨论编码，它会转化消息到出站数据.</p>
+<h3 id="7-3_Encoders">7.3  Encoders</h3><p>回归一下原先的定义，一个编码器把出站数据从一种格式转化为另一种格式，那么为了在Pipeline中使用，它实现了ChannelOutboundHandler接口.<br>Netty提供了一系列的基类帮助你方便地实现自己的编码器，同样的逻辑和解码器一样提供了两种功能，</p>
+<ul>
+<li>把消息编码为字节</li>
+<li>把消息编码为消息<br>我们会从抽象基础类MessageToByteEncoder开始，</li>
+</ul>
+<h4 id="7-3-1_MessageToByteEncoder">7.3.1  MessageToByteEncoder</h4><p>前面我们了解了使用 ByteToMessageDecoder 来实现从字节数据到消息的转化，现在我们通过抽象基类MessageToByteEncoder做相反的事情，表7.3 罗列了API:</p>
+<h5 id="表_7-3_MessageToByteEncoder_API">表 7.3 MessageToByteEncoder API</h5><table>
+<thead>
+<tr>
+<th><em>方法名</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>encode</td>
+<td>encode是你唯一需要实现的方法，这个时候它会把出站数据编码成ByteBuf. 然后ByteBuf会被传递到ChannelPipeline中的下一个ChannelOutboundHandler.</td>
+</tr>
+</tbody>
+</table>
+<p>这个类只有一个方法，而解码器的基类却有两个方法的原因是，解码器通常需要在Channel关闭前产生最后的一个消息。而解码器却不需要，因为在Channel关闭后产生一个消息也没有用。</p>
+<p>下面的例子会更好的理解编码器，我们产生了一个Short值，然后把它编码成字节数据，发送到网络。我们提供一个ShortToByteEncoder来实现这个能力，图7.3 显示了这个过程，</p>
+<h5 id="图7-3_ShortToByteEncoder的流程">图7.3 ShortToByteEncoder的流程</h5><p><img src="/blog/img/73shorttoByteencoder.png" alt="73ShortToByteEncoder的流程"></p>
+<p>图 7.3 显示了编码器收到了Short类型的消息， 编码，写入到ByteBuf中，这个ByteBuf被转发到了下一个ChannelOutboundHandler中，每个Short类型的消息占2个字节。</p>
+<p>实现的源码如下：</p>
+<h5 id="源码7-5">源码7.5</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ShortToByteEncoder</span> <span class="keyword">extends</span> <span class="title">MessageToByteEncoder</span>&lt;<span class="title">Short</span>&gt; </span>&#123; <span class="comment">//继承抽象基础类</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">encode</span><span class="params">(ChannelHandlerContext ctx, Short msg, ByteBuf out)</span>    <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        out.writeShort(msg); <span class="comment">//写入Short类型值到ByteBuf中</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Netty提供了好几个MessageToByteEncoder类来作为你基础实现，如可以参考WebSocket08FrameEncoder，提供一个很好的例子，<br>可以在 io.netty.handler.codec.http.websocketx中找到这个类。</p>
+<h4 id="7-3-2_MessageToMessageEncoder">7.3.2  MessageToMessageEncoder</h4><p>我们已经学习了如何把入站数据从一种消息格式转化为另一种消息格式。为了完成在出站数据中的这个转化，Netty 提供了MessageToMessageEncoder基类.<br>如表7.4 所示，同样也只有一个方法：</p>
+<table>
+<thead>
+<tr>
+<th><em>方法名</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>encode</td>
+<td>encode是你唯一需要实现的方法，每个被write()方法写入的消息都会被编码成一个或者多个消息，这个编码后的消息会被传递到ChannelPipeline中的下一个ChannelOutboundHandler.</td>
+</tr>
+</tbody>
+</table>
+<p>同样我们也提供了字符到Short类型的编码例子：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span>  <span class="title">StringToShortEncoder</span> <span class="keyword">extends</span> <span class="title">MessageToMessageEncoder</span>&lt;<span class="title">String</span>&gt; </span>&#123; <span class="comment">//继承基础抽象类</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">encode</span><span class="params">(ChannelHandlerContext ctx, String msg,List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    out.add(Short.parseShort(msg)); <span class="comment">//转化为Short类型</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>同样也和前面的例子把这两个编码器依次放入ChannelPipeline中，实现从String 到 Short 到Byte，再发送到网络的全过程。<br>更复杂的例子可以参考包io.netty.handler.codec.protobuf中的ProtobufEncoder类.</p>
+<h3 id="7-4_抽象Codec类">7.4  抽象Codec类</h3><p> 尽管我们已经单独讨论了解码器和编码器，但是有时候你可能发现把这些出站和入站数据在一个地方编码和解码会很有用。<br> Netty的Codec类提供了这种需求的基础抽象类。它会把出站和入站数据绑定在一起提供一些动作，所以它会同时实现ChannelInboundHandler和ChannelOutboundHandler接口<br> 你可能会惊讶为什么不采用组合类的方式，而是单独使用解码器和编码器的原因。最简单的答案是组合两种功能，相当于是紧耦合，减低了可重用性。采用分离的方式有利于更容易的扩展它。<br> 我们来看一下Codec.</p>
+<h4 id="7-4-1_ByteToMessageCodec">7.4.1  ByteToMessageCodec</h4><p> 我们来设想一下这个场景,我们需要把字节数据解码成POJO，然后再把POJO编码成字节数据。一个ByteToMessageCodec可以处理这个情况它捆绑了ByteToMessageDecoder和MessageToByteDecoder.</p>
+<p> 重要的方法罗列在表7.5 .</p>
+<h5 id="表_7-5_ByteToMessageCodec_API">表 7.5 ByteToMessageCodec API</h5><table>
+<thead>
+<tr>
+<th><em>方法名</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>decode</td>
+<td>只要字节数据已经准备好被消费了这个方法就被调用，它把入站ByteBuf数据转化为特定的消息格式并且转发到下一个ChannelInboundHandler</td>
+</tr>
+<tr>
+<td>decodeLast</td>
+<td>默认的的这个方法的实现被decode()方法代理。当Channel变成不活跃的时候调用。</td>
+</tr>
+<tr>
+<td>encode</td>
+<td>这个方法会在每个消息被写入到ChannelPipeline中的时候调用. 编码后的消息被包含在一个ByteBuf中转发到ChannelPipeline中的下一个ChannelOutboundHandler.</td>
+</tr>
+</tbody>
+</table>
+<p>什么是ByteToMessageCodec的好的用例呢？ 任何请求/响应类型(request/response)的协议都是好的用途。如SMTP、HTTP等。Codec会读取入站数据，解码成客户化的消息类型，如SmtpRequest。然后一个SmtpResponse响应就会被创建，然后被编码成字节数据，发送到网络。</p>
+<h4 id="7-4-2_MessageToMessageCodec">7.4.2  MessageToMessageCodec</h4><p>在7.3.2中我们看到了使用MessageToMessageEncoder把一种消息转化为另一种消息。那么MessageToMessageCodec就是能把一种消息转化成另一种消息，又能转化回来的类。<br>我们先来看一下这个类的方法:</p>
+<p>表 7.6 MessageToMessageCodec API</p>
+<table>
+<thead>
+<tr>
+<th><em>方法名</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>decode</td>
+<td>使用Codec把入站消息解码成指定消息格式。并且转发到下一个ChannelInboundHandler</td>
+</tr>
+<tr>
+<td>decodeLast</td>
+<td>默认的的这个方法的实现被decode()方法代理。当Channel变成不活跃的时候调用。</td>
+</tr>
+<tr>
+<td>encode</td>
+<td>这个方法会在每个出站消息通过ChannelPipeline的时候调用. 编码后的消息被包含在一个ByteBuf中转发到ChannelPipeline中的下一个ChannelOutboundHandler.</td>
+</tr>
+</tbody>
+</table>
+<p>MessageToMessageCodec 是一个参数化的类齐定义如下:</p>
+<blockquote>
+<p> public abstract class MessageToMessageCodec<inbound,outbound><br>重要的方法如下：<br>protected abstract void encode(ChannelHandlerContext ctx,OUTBOUND msg, List<object> out)<br>protected abstract void decode(ChannelHandlerContext ctx,INBOUND msg, List<object> out)</object></object></inbound,outbound></p>
+</blockquote>
+<p>encode()方法转化OUTBOUND类型的出站消息到INBOUND类型，decode()方法则相反.什么时候会使用这种Codec呢？<br>实际上，这个是一种很常见的场景,通常包括在两个不同的消息API中转化数据。在我们与一些遗留系统或者私有的消息格式打交道的时候就是这种场景了。<br>源码7.7 显示了这样的一个转化场景.这里我们使用了参数化的INBOUND类型为WebSocketFrame，OUTBOND类型为MyWebSocketFrame的MesageToMesageCodec.<br> MyWebSocketFrame将会是一个WebSocketConvertHandler的静态嵌入类.</p>
+<h5 id="源码7-7_MessageToMessageCodec">源码7.7 MessageToMessageCodec</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@ChannelHandler</span>.Sharable</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WebSocketConvertHandler</span> <span class="keyword">extends</span> <span class="title">MessageToMessageCodec</span>&lt;<span class="title">WebSocketFrame</span>, <span class="title">WebSocketConvertHandler</span>.<span class="title">MyWebSocketFrame</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> WebSocketConvertHandler INSTANCE = <span class="keyword">new</span> WebSocketConvertHandler();</span><br><span class="line"></span><br><span class="line">    <span class="comment">//把MyWebSocketFrame消息编码成WebSocketFrame消息.</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">encode</span><span class="params">(ChannelHandlerContext ctx, MyWebSocketFrame msg, List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ByteBuf payload = msg.getData().duplicate().retain();</span><br><span class="line">        <span class="keyword">switch</span> (msg.getType()) &#123; <span class="comment">//检查MyWebSocketFrame类型</span></span><br><span class="line">            <span class="keyword">case</span> BINARY:</span><br><span class="line">                out.add(<span class="keyword">new</span> BinaryWebSocketFrame(payload));</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> TEXT:</span><br><span class="line">                out.add(<span class="keyword">new</span> TextWebSocketFrame(payload));</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> CLOSE:</span><br><span class="line">                out.add(<span class="keyword">new</span> CloseWebSocketFrame(<span class="keyword">true</span>, <span class="number">0</span>, payload));</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> CONTINUATION:</span><br><span class="line">                out.add(<span class="keyword">new</span> ContinuationWebSocketFrame(payload));</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> PONG:</span><br><span class="line">                out.add(<span class="keyword">new</span> PongWebSocketFrame(payload));</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> PING:</span><br><span class="line">                out.add(<span class="keyword">new</span> PingWebSocketFrame(payload));</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Unsupported websocket msg "</span> + msg);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//把WebSocketFrame 消息解码成 MyWebSocketFrame 消息</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">decode</span><span class="params">(ChannelHandlerContext ctx, io.netty.handler.codec.http.websocketx.WebSocketFrame msg, List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (msg <span class="keyword">instanceof</span> BinaryWebSocketFrame) &#123;</span><br><span class="line">            out.add(<span class="keyword">new</span> MyWebSocketFrame(MyWebSocketFrame.FrameType.BINARY, msg.content().copy()));</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (msg <span class="keyword">instanceof</span> CloseWebSocketFrame) &#123;</span><br><span class="line">            out.add(<span class="keyword">new</span> MyWebSocketFrame(MyWebSocketFrame.FrameType.CLOSE, msg.content().copy()));</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (msg <span class="keyword">instanceof</span> PingWebSocketFrame) &#123;</span><br><span class="line">            out.add(<span class="keyword">new</span> MyWebSocketFrame(MyWebSocketFrame.FrameType.PING, msg.content().copy()));</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (msg <span class="keyword">instanceof</span> PongWebSocketFrame) &#123;</span><br><span class="line">            out.add(<span class="keyword">new</span> MyWebSocketFrame(MyWebSocketFrame.FrameType.PONG, msg.content().copy()));</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (msg <span class="keyword">instanceof</span> TextWebSocketFrame) &#123;</span><br><span class="line">            out.add(<span class="keyword">new</span> MyWebSocketFrame(MyWebSocketFrame.FrameType.TEXT, msg.content().copy()));</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (msg <span class="keyword">instanceof</span> ContinuationWebSocketFrame) &#123;</span><br><span class="line">            out.add(<span class="keyword">new</span> MyWebSocketFrame(MyWebSocketFrame.FrameType.CONTINUATION, msg.content().copy()));</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Unsupported websocket msg "</span> + msg);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//自定义的MyWebSocket消息</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">MyWebSocketFrame</span> </span>&#123;</span><br><span class="line">        <span class="keyword">public</span> <span class="keyword">enum</span> FrameType &#123;<span class="comment">//消息类型</span></span><br><span class="line">            BINARY,</span><br><span class="line">            CLOSE,</span><br><span class="line">            PING,</span><br><span class="line">            PONG,</span><br><span class="line">            TEXT,</span><br><span class="line">            CONTINUATION</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> FrameType type;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> ByteBuf data;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">MyWebSocketFrame</span><span class="params">(FrameType type, ByteBuf data)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.type = type;</span><br><span class="line">            <span class="keyword">this</span>.data = data;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> FrameType <span class="title">getType</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> type;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> ByteBuf <span class="title">getData</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> data;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="7-4-3_CombinedChannelDuplexHandler">7.4.3  CombinedChannelDuplexHandler</h4><p>就像我们前面提到的一样，捆绑一个解码器和编码器会带来可重用方面的问题，现在我们有一个好的方法可以避免这种情况。<br>即我们可以单独编写解码和解码器，也可以重用这些代码组合成一个新的类。关键是引入如下的类：<br><code>public class CombinedChannelDuplexHandler &lt;I extends ChannelInboundHandler,O extends ChannelOutboundHandler&gt;</code></p>
+<p>这个参数化的类扩展了 ChannelInboundHandler和ChannelOutboundHandler. 它将会提供给单独的编码和解码器一个容器，无需扩展Codec类。<br>我们会举例说明这个例子，首先我们看一下这个解码器的实现：</p>
+<h5 id="源码7-8_ByteToCharDecoder">源码7.8 ByteToCharDecoder</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ByteToCharDecoder</span> <span class="keyword">extends</span> <span class="title">ByteToMessageDecoder</span> </span>&#123; <span class="comment">//继承基类</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">decode</span><span class="params">(ChannelHandlerContext ctx, ByteBuf in, List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">while</span> (in.readableBytes() &gt;= <span class="number">2</span>) &#123; <span class="comment">//检查是否可读字节大于2</span></span><br><span class="line">            out.add(Character.valueOf(in.readChar()));<span class="comment">//转化为Char类型</span></span><br><span class="line">    &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>decode() 方法每次从入站数据中抽取2个字节，转化为Char类型，写入到List中。<br>现在我们看一下编码器，如源码7.9所示,编码器把Char转回为字节数据.</p>
+<h5 id="源码7-9_CharToByteEncoder">源码7.9 CharToByteEncoder</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CharToByteEncoder</span> <span class="keyword">extends</span>  <span class="title">MessageToByteEncoder</span>&lt;<span class="title">Character</span>&gt; </span>&#123; <span class="comment">// 继承MessageToByteEncoder</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">encode</span><span class="params">(ChannelHandlerContext ctx, Character msg, ByteBuf out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        out.writeChar(msg); <span class="comment">//把Char格式的msg写入到ByteBuf out中</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个CharToByteEncoder的实现扩展了MessageToByteEncoder,它可以直接调用writeChar方法写入Char数据.<br>现在我们有了编码器和解码器的实现，我们把它们捆绑在一起形成一个Codec.如下所示,</p>
+<h5 id="源码7-10_CombinedByteCharCodec">源码7.10 CombinedByteCharCodec</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//CombinedByteCharCodec通过参数化类ByteToCharDecoder,和CharToByteEncoder来加解码入账和出站数据</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CombinedByteCharCodec</span> <span class="keyword">extends</span> <span class="title">CombinedChannelDuplexHandler</span>&lt;<span class="title">ByteToCharDecoder</span>, <span class="title">CharToByteEncoder</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">CombinedByteCharCodec</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(<span class="keyword">new</span> ByteToCharDecoder(), <span class="keyword">new</span> CharToByteEncoder()); <span class="comment">//传入两个加解码的实例</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>就像你看到的一样，这种方式会更加的简单和灵活。尤其对于需要捆绑实现的Codec类的时候。</p>
+<h3 id="7-5_总结">7.5  总结</h3><p>在本章我们学习了使用Netty codec API来编写解码和编码器。我们也学习到了为什么使用Codec而不直接实现ChannelHandler来实现编码和解码。<br>我们也看到了不同的抽象基类来分别实现解码和编码，另一方面，如果我们需要很好的灵活性的话，我们可以直接捆绑已经实现的解码和编码器成一个类，<br>而无需继承抽象的codec基类。<br>在下面的章节里我们将会讨论Netty本身提供的Handler和codec.以及如何使用这些开箱即用的工具处理特定的协议和任务。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/blog/tags/Netty/">Netty</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://iamleaf.github.io/2015/10/10/7-codec/" data-title="Netty, 第七章 Codec框架 | leaf&#39;s blog" data-tsina="null" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/blog/2015/10/10/6-handler/" title="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline">
+  <strong>上一篇：</strong><br/>
+  <span>
+  Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline</span>
+</a>
+</div>
+
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/10/10/7-codec/" data-title="Netty, 第七章 Codec框架" data-url="http://iamleaf.github.io/2015/10/10/7-codec/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+
+
+  
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/blog/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=null&verifier=&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> Hello ,This is Leaf from Oracle. <br/>
+			Java,Application Server,Concurrent programming,Networking</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1411345590" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a>  © 2015 
+		
+		<a href="/blog/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/blog/js/jquery-2.0.3.min.js"></script>
+<script src="/blog/js/jquery.imagesloaded.min.js"></script>
+<script src="/blog/js/gallery.js"></script>
+<script src="/blog/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"iamleaf"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3Fe6d1f421bbc9962127a50488f9ed37d1' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/blog/img/scrollup.png"/></a>
+	</div>
+	<script src="/blog/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

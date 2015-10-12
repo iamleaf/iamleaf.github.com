@@ -1,0 +1,623 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Netty, 第五章 缓冲区--Buffer | leaf&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Leaf Ye">
+    
+
+    
+    <meta name="description" content="缓冲区 BufferNetty Buffer， 它是byte的容器(container)和分配器(allocator). 就像我们以前提到的一样，在网络上传输的最基本的数据始终是字节(byte). java NIO 提供了ByteBuffer作为字节(byte)容器, 但是它的类的使用过于复杂，不是很直观。Netty提供了另一种选择， 即ByteBuf API，相对与JDK本身的ByteBuffe">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty, 第五章 缓冲区--Buffer">
+<meta property="og:url" content="http://iamleaf.github.io/2015/10/10/5-buffer/index.html">
+<meta property="og:site_name" content="leaf's blog">
+<meta property="og:description" content="缓冲区 BufferNetty Buffer， 它是byte的容器(container)和分配器(allocator). 就像我们以前提到的一样，在网络上传输的最基本的数据始终是字节(byte). java NIO 提供了ByteBuffer作为字节(byte)容器, 但是它的类的使用过于复杂，不是很直观。Netty提供了另一种选择， 即ByteBuf API，相对与JDK本身的ByteBuffe">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/51bytebuf-architecture.png">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/52composite-bytebuf-arch.png">
+<meta property="og:image" content="http://iamleaf.github.io/blog/img/53bytebuf-index.png">
+<meta property="og:updated_time" content="2015-10-11T06:24:26.508Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Netty, 第五章 缓冲区--Buffer">
+<meta name="twitter:description" content="缓冲区 BufferNetty Buffer， 它是byte的容器(container)和分配器(allocator). 就像我们以前提到的一样，在网络上传输的最基本的数据始终是字节(byte). java NIO 提供了ByteBuffer作为字节(byte)容器, 但是它的类的使用过于复杂，不是很直观。Netty提供了另一种选择， 即ByteBuf API，相对与JDK本身的ByteBuffe">
+
+    
+    
+    <link rel="icon" href="/blog/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/blog/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/blog/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="../../../../css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/blog/"><img src="/blog/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/blog/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
+				<h2 class="blog-motto">宁静致远</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/blog/">Home</a></li>
+					
+						<li><a href="/blog/archives">Archives</a></li>
+					
+						<li><a href="/blog/about">About</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:iamleaf.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/blog/2015/10/10/5-buffer/" title="Netty, 第五章 缓冲区--Buffer" itemprop="url">Netty, 第五章 缓冲区--Buffer</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/blog/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
+		
+  <p class="article-time">
+    <time datetime="2015-10-10T14:25:00.000Z" itemprop="datePublished"> 发表于 2015-10-10</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#缓冲区_Buffer"><span class="toc-text">缓冲区 Buffer</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1_Buffer_API_概览"><span class="toc-text">5.1 Buffer API 概览</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2_ByteBuf_字节数据的容器"><span class="toc-text">5.2 ByteBuf 字节数据的容器</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-1_how_it_works"><span class="toc-text">5.2.1 how it works</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-2_ByteBuf的使用范式"><span class="toc-text">5.2.2 ByteBuf的使用范式</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#5-2-2-1_HEAP_BUFFER_Heap缓冲"><span class="toc-text">5.2.2.1 HEAP BUFFER Heap缓冲</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#后端数据_例子"><span class="toc-text">后端数据 例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#顺序访问例子"><span class="toc-text">顺序访问例子</span></a></li></ol></li><li class="toc-item toc-level-5"><a class="toc-link" href="#5-2-2-2_DIRECT_BUFFERS_直接缓冲"><span class="toc-text">5.2.2.2 DIRECT BUFFERS 直接缓冲</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#5-2-2-3_COMPOSITE_BUFFER_组合缓冲"><span class="toc-text">5.2.2.3 COMPOSITE BUFFER 组合缓冲</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#使用JDK_ByteBuffer_scatter/gather_范式,操纵组合缓冲的例子"><span class="toc-text">使用JDK ByteBuffer scatter/gather 范式,操纵组合缓冲的例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#使用Netty_CompositeByteBuf_的组合缓冲方式例子"><span class="toc-text">使用Netty CompositeByteBuf 的组合缓冲方式例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#根据字节Byte所在的位置(offset)获取该字节所在的ByteBuf的例子"><span class="toc-text">根据字节Byte所在的位置(offset)获取该字节所在的ByteBuf的例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#测试ComponentByteBuf的整合功能，把多个ByteBuf整合到一个ByteBuf,包括区间整合的例子"><span class="toc-text">测试ComponentByteBuf的整合功能，把多个ByteBuf整合到一个ByteBuf,包括区间整合的例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#测试CompositeByteBuf就和普通的ByteBuf一样的操纵方式"><span class="toc-text">测试CompositeByteBuf就和普通的ByteBuf一样的操纵方式</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#测试ReferenceCounet在CompositeByteBuf的作用"><span class="toc-text">测试ReferenceCounet在CompositeByteBuf的作用</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3_字节级别的操作"><span class="toc-text">5.3 字节级别的操作</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-1_随机访问"><span class="toc-text">5.3.1 随机访问</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#随机访问例子"><span class="toc-text">随机访问例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-2_顺序访问"><span class="toc-text">5.3.2 顺序访问</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#顺序访问例子2"><span class="toc-text">顺序访问例子2</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-3_可丢弃的字节"><span class="toc-text">5.3.3 可丢弃的字节</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#丢弃字节例子"><span class="toc-text">丢弃字节例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-4_可读的字节"><span class="toc-text">5.3.4 可读的字节</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#判断可读字节例子"><span class="toc-text">判断可读字节例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-5_可写的字节"><span class="toc-text">5.3.5 可写的字节</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#判断可写字节例子"><span class="toc-text">判断可写字节例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-6_下标管理(index_management)"><span class="toc-text">5.3.6 下标管理(index management)</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-7_搜索选项"><span class="toc-text">5.3.7 搜索选项</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-8_派生缓冲_derived_buffers"><span class="toc-text">5.3.8 派生缓冲 derived buffers</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#派生缓冲例子"><span class="toc-text">派生缓冲例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-9_读写动作"><span class="toc-text">5.3.9 读写动作</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#随机访问Int,Unsigned值例子"><span class="toc-text">随机访问Int,Unsigned值例子</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#顺序读写Long类型例子"><span class="toc-text">顺序读写Long类型例子</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4_ByteBufHolder"><span class="toc-text">5.4 ByteBufHolder</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5_ByteBuf_分配"><span class="toc-text">5.5 ByteBuf 分配</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-1_按需方式:ByteBufAllocator"><span class="toc-text">5.5.1 按需方式:ByteBufAllocator</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#ByteBufUtil-java源码"><span class="toc-text">ByteBufUtil.java源码</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-2_Unpooled_Buffer"><span class="toc-text">5.5.2 Unpooled Buffer</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-3_ByteBufUtil"><span class="toc-text">5.5.3 ByteBufUtil</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-6_Reference_Counting"><span class="toc-text">5.6 Reference Counting</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#reference_counting_释放例子"><span class="toc-text">reference counting 释放例子</span></a></li></ol></li></ol></li></ol></li></ol>
+		
+		</div>
+		
+		<h2 id="缓冲区_Buffer">缓冲区 Buffer</h2><p>Netty Buffer， 它是byte的容器(container)和分配器(allocator). 就像我们以前提到的一样，在网络上传输的最基本的数据始终是字节(byte). java NIO 提供了ByteBuffer作为字节(byte)容器, 但是它的类的使用过于复杂，不是很直观。<br>Netty提供了另一种选择， 即ByteBuf API，相对与JDK本身的ByteBuffer API. 它是一种强大的实现，掩盖了JDK ByteBuffer API的这些不足，提供给网络开发者良好的工具。 ByteBuf不仅仅提供操作字节的API，它还是针对Netty ChannelPipeline进行特殊设计。<br>在本章里，我们将会举例说明ByteBuf的高级特性和灵活性。这将会给我们一个更好的了解关于Netty的处理数据的方法。这也将会是进行深一步讨论Netty的基础，如Netty的 Channel，ChannelPipeine,ChannelHandler等。换句话说数据结构始终是我们进行深入了解netty的开始。</p>
+<h3 id="5-1_Buffer_API_概览">5.1 Buffer API 概览</h3><p>Netty的缓冲区API通过ByteBuf，ByteBufHolder两个接口暴露， Netty使用 reference-counting的方式来确定什么时候释放ByteBuf或者ByteBufHolder以及相关的资源，通过使用资源池和其他技术来提高性能和减少内存使用。这个特性对开发者透明。我们提到这点是为了指出在使用ByteBuf或者ByteBufHolder时候，尽早的释放资源池的资源是一个很好的方式。</p>
+<p>如下是使用ByteBuf API的一些好处：</p>
+<ul>
+<li>可以扩展用户自定义的缓存类型(buffer type)</li>
+<li>通过内建的组合类型的缓存类型(Composite ByteBuf)实现透明的零拷贝(zero-copy)</li>
+<li>容量可以按需扩展，就像JDK StringBuilder一样</li>
+<li>在切换reader和writer模式时无需再调用flip()方法</li>
+<li>读和写使用不同的方式.</li>
+<li>支持方法链(method chaining)</li>
+<li>支持reference counting</li>
+<li>支持资源池</li>
+</ul>
+<h3 id="5-2_ByteBuf_字节数据的容器">5.2 ByteBuf 字节数据的容器</h3><p>   由于所有的网络通信都是，简而言之就是移动字节数据，所以一种有效、方便、易于使用的数据结构是非常必要的。Netty ByteBuf就是为这些需求设计的。<br>   ByteBuf 提供简单的数据访问方式，同时区分读和写API。如你可以重复的读连续的字节数据而无需调整读指针(reader index)或者类似get(i)的方法。</p>
+<h4 id="5-2-1_how_it_works">5.2.1 how it works</h4><p>   当你往ByteBuf里写数据时，它的写指针(writer index)根据相应的写入字节大小增加。当你读取的时候，读指针增加。当读字节到两个指针都在相同的位置的时候，ByteBuf变成不可读。当读取超过ByteBuf大小，继续读字节将会抛出IndexOutOfBoundException的异常。<br>   当调用ByteBuf的方法时候，如果以read和write开头的方法，则会自动移动读写指针。而如果以set和get开头的方法则不会移动读写指针，它们操作时候会传入相应的指针作为参数。<br>   ByteBuf的最大容量可以指定，默认值是Integer.MAX_VALUE。超过这个值会抛出异常.<br>   <img src="/blog/img/51bytebuf-architecture.png" alt="ByteBuf 结构"></p>
+<h4 id="5-2-2_ByteBuf的使用范式">5.2.2 ByteBuf的使用范式</h4><p>   当使用netty的时候，你将会遇到好几个通用的范式来构建ByteBuf。当我们去解释的时候，请牢记ByteBuf是如上图5.1的里面所表示的一样，一个用读写指针控制访问的字节数组。</p>
+<h5 id="5-2-2-1_HEAP_BUFFER_Heap缓冲">5.2.2.1 HEAP BUFFER Heap缓冲</h5><p>   最通用的范式来使用ByteBuf是保存数据在JVM的HEAP区，可以把它作为一个后端的数组(backing array)来看待。在不使用池化技术(pooling)的时候，它提供了快速的分配（allocation）和消除分配(deallocation)。这种方式是非常合适来处理遗留数据(legacy data).</p>
+<h6 id="后端数据_例子">后端数据 例子</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">ByteBuf heapBuf = Unpooled.buffer(length);</span><br><span class="line">ByteBuf pooledHeapBuf = PooledByteBufAllocator.DEFAULT.heapBuffer();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (heapBuf.hasArray()) &#123; <span class="comment">//1</span></span><br><span class="line">    <span class="keyword">byte</span>[] array = heapBuf.array(); <span class="comment">//2</span></span><br><span class="line">    <span class="keyword">int</span> offset = heapBuf.arrayOffset() + heapBuf.position(); <span class="comment">//3</span></span><br><span class="line">    <span class="keyword">int</span> length = heapBuf.readableBytes(); <span class="comment">//4</span></span><br><span class="line">    yourImpl.someMethod(array, offset, length); <span class="comment">//5</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>查看时候有后端数组</li>
+<li>如果是真，获取一个array引用.</li>
+<li>计算第一个字节的offset.</li>
+<li>获取可读长度 </li>
+<li>调用你的操纵数据方法</li>
+</ol>
+<h6 id="顺序访问例子">顺序访问例子</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testSequentialByteAccess</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    buffer.writerIndex(<span class="number">0</span>);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity(); i ++) &#123;</span><br><span class="line">        <span class="keyword">byte</span> value = (<span class="keyword">byte</span>) random.nextInt();</span><br><span class="line">        assertEquals(i, buffer.writerIndex());</span><br><span class="line">        assertTrue(buffer.isWritable());</span><br><span class="line">        buffer.writeByte(value);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    assertEquals(<span class="number">0</span>, buffer.readerIndex());</span><br><span class="line">    assertEquals(buffer.capacity(), buffer.writerIndex());</span><br><span class="line">    assertFalse(buffer.isWritable());</span><br><span class="line"></span><br><span class="line">    random.setSeed(seed);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity(); i ++) &#123;</span><br><span class="line">        <span class="keyword">byte</span> value = (<span class="keyword">byte</span>) random.nextInt();</span><br><span class="line">        assertEquals(i, buffer.readerIndex());</span><br><span class="line">        assertTrue(buffer.isReadable());</span><br><span class="line">        assertEquals(value, buffer.readByte());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    assertEquals(buffer.capacity(), buffer.readerIndex());</span><br><span class="line">    assertEquals(buffer.capacity(), buffer.writerIndex());</span><br><span class="line">    assertFalse(buffer.isReadable());</span><br><span class="line">    assertFalse(buffer.isWritable());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h5 id="5-2-2-2_DIRECT_BUFFERS_直接缓冲">5.2.2.2 DIRECT BUFFERS 直接缓冲</h5><p>  “Direct Buffer” 是另一种 ByteBuf实现范式。所有的对象内存分配都会在Heap中，对吗？好的，也不是全部的。在JDK1.4开始发布的NIO库中的ByteBuffer类允许JVM通过本地调用(Native call)来分配内存，即ByteBuffer的对象分配在JVM Heap外。这种数据类型的设计是为了避免把缓存的内容先拷贝到一个中介缓冲区(an intermediate buffer)，每次操作系统的调用就可以直接使用这个中介缓冲区的内容来进行网络传输。这个类型的ByteBuffer的内容可能不在垃圾回收的管辖范围之内。这也是为什么解释了”Direct Buffer”是理想的Socket传输数据类型。如果数据是包含在JVM的HEAP中的时候，实际上JVM内部的实现也是会在把数据发送到Socket之前把JVM Heap中的数据拷贝到一个”Direct Buffer”中来传输的。</p>
+<p>ByteBuffer的介绍可以查看<a href="http://docs.oracle.com/javase/7/docs/api/java/nio/ByteBuffer.html" target="_blank" rel="external">API文档</a></p>
+<p>Direct Buffer的主要缺点在于分配和释放的时候是个有些耗时的动作。当然这个动作可以通过对象池化的技术来弥补。</p>
+<blockquote>
+<p>ByteBuf pooledBuffer = PooledByteBufAllocator.DEFAULT.directBuffer();<br>ByteBuf buffer = Unpooled.directBuffer()</p>
+</blockquote>
+<h5 id="5-2-2-3_COMPOSITE_BUFFER_组合缓冲">5.2.2.3 COMPOSITE BUFFER 组合缓冲</h5><p>第三种范式我们所讨论的是一种”composite buffer”，它表示了多个ByteBuf的一个组合视图(an aggregate view).在这种数据结构中，你可以添加和删除你所需要的<br>ByteBuf的实例，这个是JDK NIO中的scatter/gather模式。Netty为了方便使用，添加了ByteBuf的子类CompositeByteBuf来表示这种数据范式。即为多个ByteBuf表示为一个单一的、合并的缓冲。<br>这种情况也是非常常见的，如如HTTP消息由两个部分组成，头(Head)和身体(body).这两个部分是由不同的应用模块产生和装配的。应用就有这个机会可以为多个消息重新利用消息体，即每次传输的时候都产生不一样的消息头，组合重用的消息体，形成一个新的消息。当然这是一种场景，这样的Composite Buffer就为这种场景提供了方便的操作方式。无需每次都为消息重新分配两个缓冲区（reallocate both buffer)</p>
+<p><img src="/blog/img/52composite-bytebuf-arch.png" alt="composite bytebuf architecture"></p>
+<h6 id="使用JDK_ByteBuffer_scatter/gather_范式,操纵组合缓冲的例子">使用JDK ByteBuffer scatter/gather 范式,操纵组合缓冲的例子</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Use an array to hold the message parts</span></span><br><span class="line">ByteBuffer header = ByteBuffer.allocate(<span class="number">128</span>);</span><br><span class="line">ByteBuffer body   = ByteBuffer.allocate(<span class="number">1024</span>);</span><br><span class="line"></span><br><span class="line">ByteBuffer[] message = <span class="keyword">new</span> ByteBuffer[] &#123; header, body &#125;;</span><br><span class="line"><span class="comment">// Use copy to merge both</span></span><br><span class="line">ByteBuffer message2 = ByteBuffer.allocate(</span><br><span class="line">header.remaining() + body.remaining());</span><br><span class="line">message2.put(header);</span><br><span class="line">message2.put(body);</span><br><span class="line">message2.flip();</span><br></pre></td></tr></table></figure>
+<p>这种操作方式明显是不足的，分配和拷贝的动作没有优化，操纵数组的编码方式也是尴尬的。</p>
+<h6 id="使用Netty_CompositeByteBuf_的组合缓冲方式例子">使用Netty CompositeByteBuf 的组合缓冲方式例子</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">CompositeByteBuf messageBuf = ...;</span><br><span class="line">ByteBuf headerBuf = ...; <span class="comment">// can be backing or direct</span></span><br><span class="line">ByteBuf bodyBuf = ...; <span class="comment">// can be backing or direct</span></span><br><span class="line">messageBuf.addComponent(headerBuf, bodyBuf); <span class="comment">//1</span></span><br><span class="line">.....</span><br><span class="line">messageBuf.removeComponent(<span class="number">0</span>); <span class="comment">// replace the header //2</span></span><br><span class="line"><span class="keyword">for</span> (ByteBuf buf : messageBuf) &#123; <span class="comment">//3</span></span><br><span class="line">    System.out.println(buf.toString());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="number">1</span>.  添加ByteBuf实例到 CompositeByteBuf .</span><br><span class="line"><span class="number">2</span> . 移走第一个ByteBuf.</span><br><span class="line"><span class="number">3</span> . 循环处理CompositeByteBuf中的ByteBuf实例.</span><br></pre></td></tr></table></figure>
+<h6 id="根据字节Byte所在的位置(offset)获取该字节所在的ByteBuf的例子">根据字节Byte所在的位置(offset)获取该字节所在的ByteBuf的例子</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testComponentAtOffset</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    CompositeByteBuf buf = releaseLater((CompositeByteBuf) wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[]&#123;<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>&#125;,</span><br><span class="line">                    <span class="keyword">new</span> <span class="keyword">byte</span>[]&#123;<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">26</span>&#125;));</span><br><span class="line"></span><br><span class="line">    <span class="comment">//Ensure that a random place will be fine</span></span><br><span class="line">    <span class="comment">//返回第二个位置offset 就是值等于3的位置的Buf，Buf=&#123;1,2,3,4,5&#125;是第一个component</span></span><br><span class="line">    assertEquals(<span class="number">5</span>, buf.componentAtOffset(<span class="number">2</span>).capacity());</span><br><span class="line"></span><br><span class="line">   <span class="comment">//Loop through each byte</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">byte</span> index = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (index &lt; buf.capacity()) &#123;</span><br><span class="line">        ByteBuf _buf = buf.componentAtOffset(index++);</span><br><span class="line">        assertNotNull(_buf);</span><br><span class="line">        assertTrue(_buf.capacity() &gt; <span class="number">0</span>);</span><br><span class="line">        assertNotNull(_buf.getByte(<span class="number">0</span>));</span><br><span class="line">        assertNotNull(_buf.getByte(_buf.readableBytes() - <span class="number">1</span>));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h6 id="测试ComponentByteBuf的整合功能，把多个ByteBuf整合到一个ByteBuf,包括区间整合的例子">测试ComponentByteBuf的整合功能，把多个ByteBuf整合到一个ByteBuf,包括区间整合的例子</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testFullConsolidation</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    CompositeByteBuf buf = releaseLater(compositeBuffer(Integer.MAX_VALUE));</span><br><span class="line">    buf.addComponent(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">1</span> &#125;));</span><br><span class="line">    buf.addComponent(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">2</span>, <span class="number">3</span> &#125;));</span><br><span class="line">    buf.addComponent(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span> &#125;));</span><br><span class="line">    buf.consolidate();</span><br><span class="line"></span><br><span class="line">    assertEquals(<span class="number">1</span>, buf.numComponents());</span><br><span class="line">    assertTrue(buf.hasArray());</span><br><span class="line">    assertNotNull(buf.array());</span><br><span class="line">    assertEquals(<span class="number">0</span>, buf.arrayOffset());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testRangedConsolidation</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    CompositeByteBuf buf = releaseLater(compositeBuffer(Integer.MAX_VALUE));</span><br><span class="line">    buf.addComponent(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">1</span> &#125;));</span><br><span class="line">    buf.addComponent(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">2</span>, <span class="number">3</span> &#125;));</span><br><span class="line">    buf.addComponent(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span> &#125;));</span><br><span class="line">    buf.addComponent(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span> &#125;));</span><br><span class="line">    buf.consolidate(<span class="number">1</span>, <span class="number">2</span>);</span><br><span class="line"></span><br><span class="line">    assertEquals(<span class="number">3</span>, buf.numComponents());</span><br><span class="line">    assertEquals(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">1</span> &#125;), buf.component(<span class="number">0</span>));</span><br><span class="line">    assertEquals(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span> &#125;), buf.component(<span class="number">1</span>));</span><br><span class="line">    assertEquals(wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span> &#125;), buf.component(<span class="number">2</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h6 id="测试CompositeByteBuf就和普通的ByteBuf一样的操纵方式">测试CompositeByteBuf就和普通的ByteBuf一样的操纵方式</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testCompositeWrappedBuffer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    ByteBuf header = releaseLater(buffer(<span class="number">12</span>)).order(order);</span><br><span class="line">    ByteBuf payload = releaseLater(buffer(<span class="number">512</span>)).order(order);</span><br><span class="line"></span><br><span class="line">    header.writeBytes(<span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">12</span>]);</span><br><span class="line">    payload.writeBytes(<span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">512</span>]);</span><br><span class="line"></span><br><span class="line">    ByteBuf buffer = releaseLater(wrappedBuffer(header, payload));</span><br><span class="line"></span><br><span class="line">    assertEquals(<span class="number">12</span>, header.readableBytes());</span><br><span class="line">    assertEquals(<span class="number">512</span>, payload.readableBytes());</span><br><span class="line"></span><br><span class="line">    assertEquals(<span class="number">12</span> + <span class="number">512</span>, buffer.readableBytes());</span><br><span class="line"></span><br><span class="line">    assertEquals(<span class="number">2</span>, buffer.nioBufferCount());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h6 id="测试ReferenceCounet在CompositeByteBuf的作用">测试ReferenceCounet在CompositeByteBuf的作用</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testReferenceCounts2</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    ByteBuf c1 = buffer().writeByte(<span class="number">1</span>);</span><br><span class="line">    ByteBuf c2 = buffer().writeByte(<span class="number">2</span>).retain();</span><br><span class="line">    ByteBuf c3 = buffer().writeByte(<span class="number">3</span>).retain(<span class="number">2</span>);</span><br><span class="line"></span><br><span class="line">    CompositeByteBuf bufA = compositeBuffer();</span><br><span class="line">    bufA.addComponents(c1, c2, c3).writerIndex(<span class="number">3</span>);</span><br><span class="line"></span><br><span class="line">    CompositeByteBuf bufB = compositeBuffer();</span><br><span class="line">    bufB.addComponents(bufA);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Ensure that bufA.refCnt() did not change.</span></span><br><span class="line">    assertThat(bufA.refCnt(), is(<span class="number">1</span>));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Ensure that c[123]'s refCnt did not change.</span></span><br><span class="line">    assertThat(c1.refCnt(), is(<span class="number">1</span>));</span><br><span class="line">    assertThat(c2.refCnt(), is(<span class="number">2</span>));</span><br><span class="line">    assertThat(c3.refCnt(), is(<span class="number">3</span>));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// This should decrease bufA.refCnt().</span></span><br><span class="line">    bufB.release();</span><br><span class="line">    assertThat(bufB.refCnt(), is(<span class="number">0</span>));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Ensure bufA.refCnt() changed.</span></span><br><span class="line">    assertThat(bufA.refCnt(), is(<span class="number">0</span>));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Ensure that c[123]'s refCnt also changed due to the deallocation of bufA.</span></span><br><span class="line">    assertThat(c1.refCnt(), is(<span class="number">0</span>));</span><br><span class="line">    assertThat(c2.refCnt(), is(<span class="number">1</span>));</span><br><span class="line">    assertThat(c3.refCnt(), is(<span class="number">2</span>));</span><br><span class="line"></span><br><span class="line">    c3.release(<span class="number">2</span>);</span><br><span class="line">    c2.release();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从上面的一些例子可以看出,Netty为CompositeByteBuf添加了很多操作方式，而不是像JDK NIO里的字节的Byte级别的操纵，简化了大量的low Level的操作，从而消除了由此引起的一些性能和内存上使用上的问题，也是而为Socket基础上的各种协议级别的操纵定义了基础数据结构。</p>
+<h3 id="5-3_字节级别的操作">5.3 字节级别的操作</h3><p>除了读写的基础操作之外，ByteBuf还定义了很多操纵数据的方式，下面将会讨论这些方式，</p>
+<h4 id="5-3-1_随机访问">5.3.1 随机访问</h4><p>  和Java字节数组一样，ByteBuf的下标index（java是没有指针的，所以为了方便理解，在本文引用数组下标作为这个翻译)也是从0开始的，最后一个位置是(容量-1).</p>
+<blockquote>
+<p> ByteBuf buffer = …//可以是各种ByteBuf，Heap，Direct，Composite等</p>
+</blockquote>
+<h5 id="随机访问例子">随机访问例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span> <span class="comment">//使用以set/get开头的方法，不会改变ByteBuf的读写下标(readIndex,writeIndex) 随机访问</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testRandomByteAccess</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity(); i ++) &#123;</span><br><span class="line">        <span class="keyword">byte</span> value = (<span class="keyword">byte</span>) random.nextInt();</span><br><span class="line">        buffer.setByte(i, value);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    random.setSeed(seed);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity(); i ++) &#123;</span><br><span class="line">        <span class="keyword">byte</span> value = (<span class="keyword">byte</span>) random.nextInt();</span><br><span class="line">        assertEquals(value, buffer.getByte(i));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="5-3-2_顺序访问">5.3.2 顺序访问</h4><p>Netty ByteBuf有读和写两个下标，而JDK的ByteBuffer仅仅使用一个下标（所以在切换读写模式的时候调用flip()方法). 下图显示了ByteBuf的两个下标把ByteBuf划分成3个区域</p>
+<p><img src="/blog/img/53bytebuf-index.png" alt="ByteBuf 下标管理"></p>
+<ol>
+<li>可丢弃的字节（已经读过了，可丢弃）</li>
+<li>可读的字节（还没有读过的字节）</li>
+<li>可写的字节(还有剩余的空间可供写入字节）</li>
+</ol>
+<h5 id="顺序访问例子2">顺序访问例子2</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span> <span class="comment">//使用以read/write开头的方法，读写下标自动变化,所以必须顺序访问</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testSequentialLongAccess</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    buffer.writerIndex(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity(); i += <span class="number">8</span>) &#123;</span><br><span class="line">        <span class="keyword">long</span> value = random.nextLong();</span><br><span class="line">        assertEquals(i, buffer.writerIndex());</span><br><span class="line">        assertTrue(buffer.isWritable());</span><br><span class="line">        buffer.writeLong(value);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    assertEquals(<span class="number">0</span>, buffer.readerIndex());</span><br><span class="line">    assertEquals(buffer.capacity(), buffer.writerIndex());</span><br><span class="line">    assertFalse(buffer.isWritable());</span><br><span class="line"></span><br><span class="line">    random.setSeed(seed);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity(); i += <span class="number">8</span>) &#123;</span><br><span class="line">        <span class="keyword">long</span> value = random.nextLong();</span><br><span class="line">        assertEquals(i, buffer.readerIndex());</span><br><span class="line">        assertTrue(buffer.isReadable());</span><br><span class="line">        assertEquals(value, buffer.readLong());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    assertEquals(buffer.capacity(), buffer.readerIndex());</span><br><span class="line">    assertEquals(buffer.capacity(), buffer.writerIndex());</span><br><span class="line">    assertFalse(buffer.isReadable());</span><br><span class="line">    assertFalse(buffer.isWritable());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="5-3-3_可丢弃的字节">5.3.3 可丢弃的字节</h4><p>被标示为可丢弃的字节(discarded bytes) 包含已经被读过的字节。它们可以被丢弃，通过调用discardReadBytes()所占的空间也会被回收利用.<br>初始的分段下标保存在readIndex中，readIndex=0.随着“read”的动作执行而增加.discardReadBytes()动作，将会移动readIndex和writeIndex之间的字节到<br>开始位置零下标，并且设置readIndex和writeIndex为0，如加粗代码所示. 经常调用discardReadBytes()的话，需要注意了。移动字节会引起内存拷贝，这个是耗时动作。<br>仅仅当需要时候使用.</p>
+<h5 id="丢弃字节例子">丢弃字节例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testDiscardReadBytes3</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        ByteBuf a, b;</span><br><span class="line">        a = wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span> &#125;).order(order);</span><br><span class="line">        b = releaseLater(wrappedBuffer(</span><br><span class="line">                wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span> &#125;, <span class="number">0</span>, <span class="number">5</span>).order(order),</span><br><span class="line">                wrappedBuffer(<span class="keyword">new</span> <span class="keyword">byte</span>[] &#123; <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span> &#125;, <span class="number">5</span>, <span class="number">5</span>).order(order)));</span><br><span class="line">        a.skipBytes(<span class="number">6</span>);</span><br><span class="line">        <span class="comment">//忽略前面6个字节,readindex=6</span></span><br><span class="line">        a.markReaderIndex();</span><br><span class="line">        <span class="comment">//标记</span></span><br><span class="line">        b.skipBytes(<span class="number">6</span>);</span><br><span class="line">        b.markReaderIndex();</span><br><span class="line">        assertEquals(a.readerIndex(), b.readerIndex());</span><br><span class="line">        a.readerIndex(a.readerIndex() - <span class="number">1</span>);</span><br><span class="line">        b.readerIndex(b.readerIndex() - <span class="number">1</span>);</span><br><span class="line">        <span class="comment">//readIndex=5</span></span><br><span class="line">        assertEquals(a.readerIndex(), b.readerIndex());</span><br><span class="line">        a.writerIndex(a.writerIndex() - <span class="number">1</span>);</span><br><span class="line">        a.markWriterIndex();</span><br><span class="line">        b.writerIndex(b.writerIndex() - <span class="number">1</span>);</span><br><span class="line">        b.markWriterIndex();</span><br><span class="line">        assertEquals(a.writerIndex(), b.writerIndex());</span><br><span class="line">        a.writerIndex(a.writerIndex() + <span class="number">1</span>);</span><br><span class="line">        b.writerIndex(b.writerIndex() + <span class="number">1</span>);</span><br><span class="line">        assertEquals(a.writerIndex(), b.writerIndex());</span><br><span class="line">        assertTrue(ByteBufUtil.equals(a, b));</span><br><span class="line">        <span class="comment">// now discard</span></span><br><span class="line">        a.discardReadBytes();</span><br><span class="line">        b.discardReadBytes();</span><br><span class="line"></span><br><span class="line">        System.out.println();</span><br><span class="line">        <span class="comment">//678910678910</span></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;a.capacity();i++)&#123;System.out.print(a.getByte(i));&#125;;</span><br><span class="line">        System.out.println();</span><br><span class="line">        <span class="comment">//678910</span></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;a.readableBytes();i++)&#123;System.out.print(a.getByte(i));&#125;;</span><br><span class="line">        System.out.println();</span><br><span class="line">        <span class="comment">//678910</span></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;b.capacity();i++)&#123;System.out.print(b.getByte(i));&#125;;</span><br><span class="line">        System.out.println();</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;b.readableBytes();i++)&#123;System.out.print(b.getByte(i));&#125;;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//readindex=0</span></span><br><span class="line">        <span class="comment">//discard 5个byte</span></span><br><span class="line">        assertEquals(a.readerIndex(), b.readerIndex());</span><br><span class="line">        assertEquals(a.writerIndex(), b.writerIndex());</span><br><span class="line">        assertTrue(ByteBufUtil.equals(a, b));</span><br><span class="line">        <span class="comment">//reset到原来6的位置，但是又discard 5byte 回到原来的位置就是1, readerindex=1</span></span><br><span class="line">        a.resetReaderIndex();</span><br><span class="line">        b.resetReaderIndex();</span><br><span class="line">        assertEquals(a.readerIndex(), b.readerIndex());</span><br><span class="line">        a.resetWriterIndex();</span><br><span class="line">        b.resetWriterIndex();</span><br><span class="line">        assertEquals(a.writerIndex(), b.writerIndex());</span><br><span class="line">        assertTrue(ByteBufUtil.equals(a, b));</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h4 id="5-3-4_可读的字节">5.3.4 可读的字节</h4><p>可读字节段，保存了ByteBuf实际的数据。不管是新分配的还是包装过的(wapped)还是拷贝模式(copied)产生的ByteBuf的默认起始下标为0.<br>如果越界读取，将会产生IndexOutOfBoundsException.</p>
+<blockquote>
+<p>顺序读取可读的字节. 以read/write开头的方法会自动增加ByteBuf的下标</p>
+</blockquote>
+<h5 id="判断可读字节例子">判断可读字节例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ByteBuf buffer = ...;</span><br><span class="line"><span class="keyword">while</span> (buffer.readable()) &#123;</span><br><span class="line">    System.out.println(buffer.readByte());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="5-3-5_可写的字节">5.3.5 可写的字节</h4><p>表示一段可以写入内容的内存区域。默认的新分配的ByteBuf的起始写(writeIndex)为0. 超出ByteBuf的容量(capacity)时候也会触发indexOutOfBoundException.</p>
+<h5 id="判断可写字节例子">判断可写字节例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ByteBuf buffer = ...;</span><br><span class="line"><span class="keyword">while</span> (buffer.writableBytes() &gt;= <span class="number">4</span>) &#123;<span class="comment">//int类型需要4Byte</span></span><br><span class="line">    buffer.writeInt(random.nextInt());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="5-3-6_下标管理(index_management)">5.3.6 下标管理(index management)</h4><p>JDK的InputStream定义了mark(int readlimit) 和reset()方法来表示输入流的某个位置，在后来的某个时刻可以通过reset方法回到这个位置。类似的ByteBuf也有这个功能<br>markReadIndex(),resetReadIndex() 和markWriteIndex(),resetWriteIndex() 方法来实现这个能力。如上述代码@Test testDiscardReadBytes3() 所示.</p>
+<p>可以调用clear()方法，会重置readIndex和writeIndex为零。这个动作不会清除内容. 方法的作用是和setIndex(0,0)是一样的。显然这个方法比discardReadBytes()轻量。</p>
+<h4 id="5-3-7_搜索选项">5.3.7 搜索选项</h4><p>ByteBuf有好几种方法来搜索某个指定值在ByteBuf中的位置。最简单的方式是使用 indexOf(int fromIndex,  int toIndex,  byte value)。更加复杂的方式可以通过执行方法传入ByteBufProcessor参数。<br>这个接口定义了单一的方法: boolean process(byte value).ByteBufProcessor定义了一系列的便利的实现。如下例子表示搜索回车符：</p>
+<blockquote>
+<p>ByteBuf buffer = …;<br>int index = buffer.forEachByte(ByteBufProcessor.FIND_CR);</p>
+</blockquote>
+<h4 id="5-3-8_派生缓冲_derived_buffers">5.3.8 派生缓冲 derived buffers</h4><p>派生缓冲Derived Buffer是一个ByteBuf的视图，它表示了ByteBuf的内容的一种制定的表现方式。这种视图通过方法duplicate(),slice(),slice(int,int),readOnly(),order(ByteOrder)等方法创建出来。<br>这些方法返回一个新的ByteBuf的实例，有自己的readIndex,writeIndex. 但是内部的存储数据是共享源ByteBuf。这种派生的创建方式要比直接创建ByteBuf要轻量，更改派生ByteBuf的内容会直接更改源ByteBuf的内容。<br>如果需要重新生成一个ByteBuf的拷贝，可以使用copy()或者copy(int,int)方法返回一个全新的ByteBuf，跟派生的ByteBuf不一样，Copy()产生的全新重新拷贝的ByteBuf,更改拷贝后的ByteBuf，不会影响源ByteBuf.<br>如果你需要操作ByteBuf的一个区间的内容，那么可以使用slice(int,int)方法：</p>
+<h5 id="派生缓冲例子">派生缓冲例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Charset utf8 = Charset.forName(<span class="string">"UTF-8"</span>);</span><br><span class="line">ByteBuf buf = Unpooled.copiedBuffer(<span class="string">"Netty in Action rocks!"</span>, utf8); <span class="comment">//1</span></span><br><span class="line">ByteBuf sliced = buf.slice(<span class="number">0</span>, <span class="number">14</span>); <span class="comment">//2</span></span><br><span class="line">System.out.println(sliced.toString(utf8)); <span class="comment">//3</span></span><br><span class="line">buf.setByte(<span class="number">0</span>, (<span class="keyword">byte</span>) ’J’); <span class="comment">//4</span></span><br><span class="line"><span class="keyword">assert</span> buf.get(<span class="number">0</span>) == sliced.get(<span class="number">0</span>); <span class="comment">//5</span></span><br></pre></td></tr></table></figure>
+<ol>
+<li>根据字符串”Netty in Action rocks!” 创建一个UTF8字符集的ByteBuf</li>
+<li>从buf中的第1~14个字节创建，创建一个派生ByteBuf sliced.</li>
+<li>输出 Netty in Action.</li>
+<li>更新下标为0位置的Byte为J.</li>
+<li>派生sliced和源buf的下标为零的值应该是相同的</li>
+</ol>
+<h4 id="5-3-9_读写动作">5.3.9 读写动作</h4><p>ByteBuf提供两类的读写动作，get()/set()动作以get/set开头的方法，不会更改ByteBuf的读写下标。read()/write()动作，以read/write开头的方法，根据方法自动调整ByteBuf的读写下标值。<br>详情请查阅API文档。这里罗列了一些：<br>getBoolean(int) , getByte(int), getUnsignedByte(int),  getMedium(int), getUnsignedMedium(int), getInt(int) , getUnsignedInt(int)<br>getLong(int)<br>getUnsignedLong(int)<br>getShort(int)<br>getUnsignedShort(int)<br>相对应的有set方法<br>setBoolean(int, boolean)<br>setByte(int, int)<br>setMedium(int, int)<br>setInt(int, int)<br>setLong(int, long)<br>setShort(int, int)<br>…</p>
+<h5 id="随机访问Int,Unsigned值例子">随机访问Int,Unsigned值例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testRandomIntAccess</span><span class="params">()</span> </span>&#123;</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity() - <span class="number">3</span>; i += <span class="number">4</span>) &#123;<span class="comment">// 注意每次i+4,int类型是4Byte</span></span><br><span class="line"><span class="keyword">int</span> value = random.nextInt();</span><br><span class="line">buffer.setInt(i, value);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">random.setSeed(seed);</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity() - <span class="number">3</span>; i += <span class="number">4</span>) &#123;</span><br><span class="line"><span class="keyword">int</span> value = random.nextInt();</span><br><span class="line">assertEquals(value, buffer.getInt(i));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//Unsigned 例子</span></span><br><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testRandomUnsignedIntAccess</span><span class="params">()</span> </span>&#123;</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity() - <span class="number">3</span>; i += <span class="number">4</span>) &#123;</span><br><span class="line"><span class="keyword">int</span> value = random.nextInt();</span><br><span class="line">buffer.setInt(i, value);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">random.setSeed(seed);</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity() - <span class="number">3</span>; i += <span class="number">4</span>) &#123;</span><br><span class="line"><span class="keyword">long</span> value = random.nextInt() &amp; <span class="number">0xFFFFFFFFL</span>;</span><br><span class="line">assertEquals(value, buffer.getUnsignedInt(i));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>read动作，包括 readBoolean()，readByte()，readUnsignedByte()，readMedium()，readUnsignedMedium()，readInt()，readUnsignedInt()，readLong()，<br>readUnsignedLong()，readShort()，readUnsignedShort()，readBytes(int,int, …)</p>
+<p>相应的Write动作，包括 writeBoolean(boolean), writeByte(int),writeMedium(int), writeInt(int), writeLong(long), writeShort(int) ,writeBytes(int)</p>
+<h5 id="顺序读写Long类型例子">顺序读写Long类型例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testSequentialLongAccess</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    buffer.writerIndex(<span class="number">0</span>);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity(); i += <span class="number">8</span>) &#123;<span class="comment">//注意long类型是8Byte</span></span><br><span class="line">        <span class="keyword">long</span> value = random.nextLong();</span><br><span class="line">        assertEquals(i, buffer.writerIndex());</span><br><span class="line">        assertTrue(buffer.isWritable());</span><br><span class="line">        buffer.writeLong(value);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    assertEquals(<span class="number">0</span>, buffer.readerIndex());</span><br><span class="line">    assertEquals(buffer.capacity(), buffer.writerIndex());</span><br><span class="line">    assertFalse(buffer.isWritable());</span><br><span class="line"></span><br><span class="line">    random.setSeed(seed);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffer.capacity(); i += <span class="number">8</span>) &#123;</span><br><span class="line">        <span class="keyword">long</span> value = random.nextLong();</span><br><span class="line">        assertEquals(i, buffer.readerIndex());</span><br><span class="line">        assertTrue(buffer.isReadable());</span><br><span class="line">        assertEquals(value, buffer.readLong());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    assertEquals(buffer.capacity(), buffer.readerIndex());</span><br><span class="line">    assertEquals(buffer.capacity(), buffer.writerIndex());</span><br><span class="line">    assertFalse(buffer.isReadable());</span><br><span class="line">    assertFalse(buffer.isWritable());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>ByteBuf其他的一些有用的方法:</p>
+<table>
+<thead>
+<tr>
+<th><em>方法</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>isReadable()</td>
+<td>只要有一个字节可读，返回真</td>
+</tr>
+<tr>
+<td>isWritable()</td>
+<td>只要有一个字节可写，返回真</td>
+</tr>
+<tr>
+<td>readableBytes()</td>
+<td>返回可读字节的数量</td>
+</tr>
+<tr>
+<td>writableBytes()</td>
+<td>返回可写的字节的数量</td>
+</tr>
+<tr>
+<td>capacity()</td>
+<td>返回ByteBuf的容量，可容纳的字节数量。这个数量到达了后，ByteBuf会扩展，直到maxCapacity值为止。</td>
+</tr>
+<tr>
+<td>maxCapacity()</td>
+<td>返回ByteBuf的最大容量。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="5-4_ByteBufHolder">5.4 ByteBufHolder</h3><p>我们通常遇到需要在实际内容数据的基础上保存一系列的属性值，HTTP响应就是一个典型的例子，同内容一起响应的还有很多属性值如状态码、cookies等。<br>Netty提供ByteBufHolder接口处理这种通用的场景，ByteBufHolder还提供了一些Netty的高级特性，如缓冲池化。即ByteBuf包含的数据可以是从一个资源池中”借”来的,可以按需释放回归资源池中。<br>ByteBufHolder提供了一些有用的方法。可以访问底层的数据和Reference counting。如data() 返回包含的数据，copy()返回ByteBufHolder的一个拷贝。<br>如果你需要实现一个客户化的类HTTP消息对象的模式，ByteBufHolder是一个好的选择。</p>
+<h3 id="5-5_ByteBuf_分配">5.5 ByteBuf 分配</h3><p>这里讨论一下ByteBuf的实例是如何管理的</p>
+<h4 id="5-5-1_按需方式:ByteBufAllocator">5.5.1 按需方式:ByteBufAllocator</h4><p>为了减少分配和释放内存,Netty通过ByteBufAllocator接口支持池化技术，它可以分配我们所描述的ByteBuf实例。是否使用池化技术是应用程序的决定，它不会更改ByteBuf的API。<br>下面描述了一些ByteBufAllocator的方法：</p>
+<table>
+<thead>
+<tr>
+<th><em>方法名</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>buffer(),buffer(int),buffer(int,int)</td>
+<td>返回一个基于Heap或者Direct Buffer的ByteBuf实例.</td>
+</tr>
+<tr>
+<td>heapBuffer(),heapBuffer(int),heapBuffer(int,int)</td>
+<td>返回一个基于Heap的ByteBuf实例</td>
+</tr>
+<tr>
+<td>directBuffer(),directBuffer(int),directBuffer(int,int)</td>
+<td>返回一个基于direct Buffer的ByteBuf实例</td>
+</tr>
+<tr>
+<td>compositeBuffer() , compositeBuffer(int); heapCompositeBuffer() heapCompositeBuffer(int);  directCompositeBuffer(), directCompositeBuffer(int);</td>
+<td>返回一个可以添加基于Heap或者Direct的CompositeByteBuf</td>
+</tr>
+<tr>
+<td>ioBuffer()</td>
+<td>返回一个适合在Socket上传输的ByteBuf.</td>
+</tr>
+</tbody>
+</table>
+<p>获取一个ByteBufAllocator的实例是很直观的，你可以通过Channl中或者ChannelHandlerContext中获取，或者直接使用ByteBufAllocator.DEFAULT来获取</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Channel channel = ...;</span><br><span class="line">ByteBufAllocator allocator = channel.alloc(); <span class="comment">//1</span></span><br><span class="line">....</span><br><span class="line">ChannelHandlerContext ctx = ...;</span><br><span class="line">ByteBufAllocator allocator2 = ctx.alloc(); <span class="comment">//2</span></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">ByteBufAllocator allocator3 = ByteBufAllocator.DEFAULT<span class="comment">//3</span></span><br></pre></td></tr></table></figure>
+<p>Netty 为ByteBufAllocator提供了两种实现:</p>
+<ul>
+<li>PooledByteBufAllocator, 提供了池化的ByteBuf实例来提高性能和减低内存碎片,这个实现对内存分配采用了一个非常有效的方法叫做”jemalloc”。这种方法已经在大多数的现代的操作系统采用。其他的实现</li>
+<li>UnpooledByteBufAllocator,顾名思义，每次返回一个新的ByteBuf实例。</li>
+</ul>
+<blockquote>
+<p>ByteBufAllocator.DEFAULT默认返回ByteBufUtil.DEFAULT_ALLOCATOR,而ByteBufUtil的DEFAULT_ALLOCATOR则默认返回UnpooledByteBufAllocator.DEFAULT</p>
+</blockquote>
+<h5 id="ByteBufUtil-java源码">ByteBufUtil.java源码</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">String allocType = SystemPropertyUtil.get(<span class="string">"io.netty.allocator.type"</span>, <span class="string">"unpooled"</span>).toLowerCase(Locale.US).trim();</span><br><span class="line">ByteBufAllocator alloc;</span><br><span class="line"><span class="keyword">if</span> (<span class="string">"unpooled"</span>.equals(allocType)) &#123;</span><br><span class="line">    alloc = UnpooledByteBufAllocator.DEFAULT;</span><br><span class="line">logger.debug(<span class="string">"-Dio.netty.allocator.type: &#123;&#125;"</span>, allocType);</span><br><span class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> (<span class="string">"pooled"</span>.equals(allocType)) &#123;</span><br><span class="line">    alloc = PooledByteBufAllocator.DEFAULT;</span><br><span class="line">logger.debug(<span class="string">"-Dio.netty.allocator.type: &#123;&#125;"</span>, allocType);</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    alloc = UnpooledByteBufAllocator.DEFAULT;</span><br><span class="line">logger.debug(<span class="string">"-Dio.netty.allocator.type: unpooled (unknown: &#123;&#125;)"</span>, allocType);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">DEFAULT_ALLOCATOR = alloc;</span><br></pre></td></tr></table></figure>
+<h4 id="5-5-2_Unpooled_Buffer">5.5.2 Unpooled Buffer</h4><p>Netty为UnPooled缓冲提供了一种便捷工具类叫Unpooled,这个工具类提供了大量的静态的帮助方法(static helper methods)来创建ByteBuf的实例，下面罗列了一些：</p>
+<table>
+<thead>
+<tr>
+<th><em>方法名</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>buffer() ，buffer(int) ，buffer(int, int)</td>
+<td>返回一个基于Heap的ByteBuf.</td>
+</tr>
+<tr>
+<td>directBuffer() , directBuffer(int) , directBuffer(int, int)</td>
+<td>返回一个非池化的Direct方式的ByteBuf</td>
+</tr>
+<tr>
+<td>wrappedBuffer()</td>
+<td>返回一个包装的ByteBuf,与源共享数据</td>
+</tr>
+<tr>
+<td>copiedBuffer()</td>
+<td>返回一个拷贝的ByteBuf,独立的拷贝数据</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>//创建复合缓冲区<br>CompositeByteBuf compBuf = Unpooled.compositeBuffer();<br>//创建堆缓冲区<br>ByteBuf heapBuf = Unpooled.buffer();<br>//创建直接缓冲区<br>ByteBuf directBuf = Unpooled.directBuffer();</p>
+</blockquote>
+<h4 id="5-5-3_ByteBufUtil">5.5.3 ByteBufUtil</h4><p>ByteBufUtil工具类提供了许多静态的帮助类方法来方便操纵ByteBuf，最有用的几个方法有，hexdump(ByteBuf buffer),这个方法返回指定ByteBuf中可读字节的十六进制字符串，这个在一些场景下很有用，一个典型的例子就是为调试程序记录(log)ByteBuf的十六进制内容，16进制的内容提供了更多的有用的日志信息。而16进制内容可以转化为原来的字节内容。另一个有用的方法是equals(ByteBuf,ByteBuf)，这个方法判断2个ByteBuf的实例的字节值是否为一致。</p>
+<h3 id="5-6_Reference_Counting">5.6 Reference Counting</h3><p>Netty 4为ByteBuf和ByteBufHolder引入reference counting引用计数的功能，两者都实现了ReferenceCounted接口</p>
+<p>引用计数本身并不复杂，它仅跟踪一个特定对象的应用次数。一个实现ReferenceCounted接口的类的实例化后初始的Refencecount=1,只要应用计数大于0，这个实例对象就保证不会被回收，当应用计数为0时候，该实例应该被回收。请注意回收这个词是跟它的实现相关的。但是最起码的实现应该还是，一个已经被回收的对象实例应该不能够被使用了。</p>
+<p>这个技术是采用有效的内存分配的池化技术的一部分，如下代码所示：</p>
+<h5 id="reference_counting_释放例子">reference counting 释放例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Channel channel = ...;</span><br><span class="line">ByteBufAllocator allocator = channel.alloc(); <span class="comment">//从channel中获取一个ByteBufAllocator</span></span><br><span class="line">....</span><br><span class="line">ByteBuf buffer = allocator.directBuffer(); <span class="comment">//分配一个Direct ByteBuf</span></span><br><span class="line"><span class="keyword">assert</span> buffer.refCnt() == <span class="number">1</span>; <span class="comment">// Refenece count =1</span></span><br><span class="line">...</span><br><span class="line"><span class="keyword">boolean</span> released = buffer.release(); <span class="comment">//Refence count =0,释放该ByteBuf</span></span><br></pre></td></tr></table></figure>
+<p>最后，谁负责回收？通常来讲，随后访问这个实例的对象负责回收。在ChannelHandler这章的资源管理还会讨论回收问题。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/blog/tags/Netty/">Netty</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://iamleaf.github.io/2015/10/10/5-buffer/" data-title="Netty, 第五章 缓冲区--Buffer | leaf&#39;s blog" data-tsina="null" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/blog/2015/10/10/4-transport/" title="Netty, 第四章 传输--Transport">
+  <strong>上一篇：</strong><br/>
+  <span>
+  Netty, 第四章 传输--Transport</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/blog/2015/10/10/6-handler/"  title="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline">
+ <strong>下一篇：</strong><br/> 
+ <span>Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/10/10/5-buffer/" data-title="Netty, 第五章 缓冲区--Buffer" data-url="http://iamleaf.github.io/2015/10/10/5-buffer/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+
+
+  
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/blog/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=null&verifier=&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> Hello ,This is Leaf from Oracle. <br/>
+			Java,Application Server,Concurrent programming,Networking</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1411345590" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a>  © 2015 
+		
+		<a href="/blog/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/blog/js/jquery-2.0.3.min.js"></script>
+<script src="/blog/js/jquery.imagesloaded.min.js"></script>
+<script src="/blog/js/gallery.js"></script>
+<script src="/blog/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"iamleaf"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3Fe6d1f421bbc9962127a50488f9ed37d1' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/blog/img/scrollup.png"/></a>
+	</div>
+	<script src="/blog/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
