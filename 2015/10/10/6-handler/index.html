@@ -31,12 +31,12 @@ ChannePipeline
 ChannelHandlerContext
 
 在Netty的数据容器ByteBuf中使用的是打包数据(package data). 在本章中我们如何在应用中移动这些数据容器。包括出站和入站的动作，和如何处理里面的内容。Nett">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/61channle-lifecycle.png">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/62channelpipeline-layout.png">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/63channle-pipeline-context.png">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/63pipeline-flow.png">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/65context-flow.png">
-<meta property="og:updated_time" content="2015-10-11T06:16:56.368Z">
+<meta property="og:image" content="http://iamleaf.github.io/img/61channle-lifecycle.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/62channelpipeline-layout.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/63channle-pipeline-context.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/63pipeline-flow.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/65context-flow.png">
+<meta property="og:updated_time" content="2015-10-12T02:32:04.077Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline">
 <meta name="twitter:description" content="Netty ChannelHandler 和 ChannelPipeline本章讨论的内容包括
@@ -50,11 +50,11 @@ ChannelHandlerContext
 
     
     
-    <link rel="icon" href="/blog/img/favicon.ico">
+    <link rel="icon" href="/img/favicon.ico">
     
     
-    <link rel="apple-touch-icon" href="/blog/img/jacman.jpg">
-    <link rel="apple-touch-icon-precomposed" href="/blog/img/jacman.jpg">
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
     
     <link rel="stylesheet" href="../../../../css/style.css" type="text/css">
 </head>
@@ -65,11 +65,11 @@ ChannelHandlerContext
 <div>
 		
 			<div id="imglogo">
-				<a href="/blog/"><img src="/blog/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
+				<a href="/"><img src="/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
 			</div>
 			
 			<div id="textlogo">
-				<h1 class="site-name"><a href="/blog/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
+				<h1 class="site-name"><a href="/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
 				<h2 class="blog-motto">宁静致远</h2>
 			</div>
 			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
@@ -78,11 +78,11 @@ ChannelHandlerContext
 				<ul>
 					<ul>
 					 
-						<li><a href="/blog/">Home</a></li>
+						<li><a href="/">Home</a></li>
 					
-						<li><a href="/blog/archives">Archives</a></li>
+						<li><a href="/archives">Archives</a></li>
 					
-						<li><a href="/blog/about">About</a></li>
+						<li><a href="/about">About</a></li>
 					
 					<li>
  					
@@ -104,11 +104,11 @@ ChannelHandlerContext
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/blog/2015/10/10/6-handler/" title="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline" itemprop="url">Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline</a>
+      <a href="/2015/10/10/6-handler/" title="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline" itemprop="url">Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline</a>
   </h1>
   <p class="article-author">By
        
-		<a href="/blog/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
+		<a href="/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
 		
   <p class="article-time">
     <time datetime="2015-10-10T12:44:37.000Z" itemprop="datePublished"> 发表于 2015-10-10</time>
@@ -162,7 +162,7 @@ ChannelHandlerContext
 </tbody>
 </table>
 <p>通常意义下Channel的生命周期如下图所示。 随着这些状态改变，相应的事件发生，然后在ChannelPipeline的ChannelHandler中就可以处理这些事件。</p>
-<p><img src="/blog/img/61channle-lifecycle.png" alt="Channel生命周期图"></p>
+<p><img src="/img/61channle-lifecycle.png" alt="Channel生命周期图"></p>
 <h4 id="6-1-2_ChannelHandler_生命周期">6.1.2  ChannelHandler 生命周期</h4><p>现在我们看一下在ChannelHandler接口中定义的生命周期方法, 在下表罗列：</p>
 <h5 id="表_6-2_ChannelHandler_生命周期方法">表 6.2 ChannelHandler 生命周期方法</h5><table>
 <thead>
@@ -349,7 +349,7 @@ ChannelHandlerContext
 </blockquote>
 <pre><code>ChannelHandlerContext提供丰富API操作，处理<span class="keyword">I</span>/<span class="keyword">O</span>动作和处理事件。(详见<span class="number">6.3</span>)
 </code></pre><p>下图提供了一个典型的ChannelPipeline结构，包括出站和入站ChannelHandler。</p>
-<p><img src="/blog/img/62channelpipeline-layout.png" alt="ChannelPipeline结构"></p>
+<p><img src="/img/62channelpipeline-layout.png" alt="ChannelPipeline结构"></p>
 <p>从上图我们看出来，ChannelPipeline主要是一些列ChannelHandler组合，ChannelPipeline还提供了在其中传播事件的能力。一个I/O事件将会被ChannelInboundHandler或者ChannelOutboundHandler处理，<br>将会通过调用ChannelHandlerContext的事件传播方法被转发到下一个ChannelHandler，比如ChannelHandlerContext.fireChannelRead(Object) 和 ChannelHandlerContext.write(Object)等。<br>一个入站的事件将会被ChannelInboundHandler处理，在图中从左边底部向上的方向流动。入站的数据通常是通过如SocketChannel.read(ByteBuffer)从远端读入的,或者说，读取了一个客户端的请求。<br>然后被传递到ChannelHandler中，由一系列预定义的Handler来处理。这些Handler就是业务逻辑实现的地方。<br>一个出站事件就是由ChannelOutboundHandler处理，如图中从右边上面向下的方向流动。一个OutboundHanlder通常产生和转换“写的请求”或者讲写入到远端的数据。<br>写动作通常被这个Channel分配的I/O线程处理，通常通过如SocketChannel.write(ByteBuff)来写入到远端。</p>
 <h4 id="6-2-1_修改ChannelPipeline">6.2.1  修改ChannelPipeline</h4><p> ChannelPipeline可以实时修改ChannelPipeline的组成，如可以添加、删除、替换ChannelPipeline中的其他ChannelHandler。我们来看一下它的API,</p>
 <h5 id="表_6-6_ChannelHandler_相关_API-">表 6.6 ChannelHandler 相关 API.</h5><table>
@@ -580,7 +580,7 @@ ChannelHandlerContext的API罗列在表<span class="number">6.10</span>
 <p><em>注意事项</em><br>ChannelHandlerContext 关联了一个ChannelHandler之后就不会改变，所以在里面缓存一个引用是安全的.<br>就像我们前面提到的一样，ChannelHandlerContext methods involve a shorter event flow than the same methods available on other classes. This should be exploited where possible to provide the best performance.</p>
 </blockquote>
 <h4 id="6-3-1_使用_ChannelHandler">6.3.1  使用 ChannelHandler</h4><p> 在这个小节里，我们举例说明了如何使用ChannelHandlerContext和Channel，ChannelPipeline的一些方法。如图6.3所示，它展示它们之间的关系：</p>
-<h5 id="图6-3_Channel,Handler,Pipeline，Context关系图">图6.3 Channel,Handler,Pipeline，Context关系图</h5><p><img src="/blog/img/63channle-pipeline-context.png" alt="Channel,Handler,Pipeline关系图"></p>
+<h5 id="图6-3_Channel,Handler,Pipeline，Context关系图">图6.3 Channel,Handler,Pipeline，Context关系图</h5><p><img src="/img/63channle-pipeline-context.png" alt="Channel,Handler,Pipeline关系图"></p>
 <ol>
 <li>Channel 绑定到 ChannelPipeline</li>
 <li>绑定了Channel的ChannelPipeline包含了ChannelHandlers</li>
@@ -591,7 +591,7 @@ ChannelHandlerContext的API罗列在表<span class="number">6.10</span>
 <h5 id="源码_6-6_从ChannelHandlerContext中获取channel">源码 6.6 从ChannelHandlerContext中获取channel</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ChannelHandlerContext ctx = ..;</span><br><span class="line">Channel channel = ctx.channel(); <span class="comment">// 获取Channel</span></span><br><span class="line">channel.write(Unpooled.copiedBuffer(<span class="string">"Netty in Action"</span>,CharsetUtil.UTF_8));<span class="comment">//写入数据</span></span><br></pre></td></tr></table></figure>
 <h5 id="源码6-7_从ChannelHandlerContext中获取ChannelPipeline">源码6.7 从ChannelHandlerContext中获取ChannelPipeline</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ChannelHandlerContext ctx = ..;</span><br><span class="line">ChannelPipeline pipeline = ctx.pipeline(); <span class="comment">//获取Pipeline</span></span><br><span class="line">pipeline.write(Unpooled.copiedBuffer(<span class="string">"Netty in Action"</span>,CharsetUtil.UTF_8));<span class="comment">//写入数据</span></span><br></pre></td></tr></table></figure>
 <p>在源码6.7和6.8中的处理流程是一样的如下图所示,很重要需要记住的就是，通过Channel和ChannelPipeline接口调用的write()方法将会传递到整个Pipeline.如果需要在ChannelHandler级别流动，那么需要调用ChannelHandlerContext中的方法</p>
-<h5 id="图6-4_事件流动示例图">图6.4 事件流动示例图</h5><p><img src="/blog/img/63pipeline-flow.png" alt="事件流动示例图"></p>
+<h5 id="图6-4_事件流动示例图">图6.4 事件流动示例图</h5><p><img src="/img/63pipeline-flow.png" alt="事件流动示例图"></p>
 <ol>
 <li>事件传递到ChannelPipeline中的第一个ChannelHandler。</li>
 <li>ChannelHandler 使用ChannelHandlerContext传递事件到ChannelPipeline中下一个ChannelHandler</li>
@@ -604,7 +604,7 @@ ChannelHandlerContext的API罗列在表<span class="number">6.10</span>
 </ul>
 <p>如上所述，如需从某个特定ChannelHander开始执行，你必须从ChannelPipeline中前一个ChannelHandler的ChannelHandlerContext调用方法，就可以完成这个能力。<br>源码 6.8 和图 6.5 表示了这个使用方式，</p>
 <h5 id="源码_6-8_ChannelHandlerContext发起的事件">源码 6.8 ChannelHandlerContext发起的事件</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ChannelHandlerContext ctx = ..; <span class="comment">//获取Context</span></span><br><span class="line">ctx.write(Unpooled.copiedBuffer(<span class="string">"Netty in Action"</span>, CharsetUtil.UTF_8)); <span class="comment">//通过Context写入数据</span></span><br></pre></td></tr></table></figure>
-<h5 id="图_6-5_使用ChannelHandlerContext的传播事件">图 6.5 使用ChannelHandlerContext的传播事件</h5><p><img src="/blog/img/65context-flow.png" alt="6.5Context事件流动示例图"></p>
+<h5 id="图_6-5_使用ChannelHandlerContext的传播事件">图 6.5 使用ChannelHandlerContext的传播事件</h5><p><img src="/img/65context-flow.png" alt="6.5Context事件流动示例图"></p>
 <ol>
 <li>ChannelHandlerContext中的方法write()被调用</li>
 <li>write事件被传递到下一个ChannelHandler</li>
@@ -631,7 +631,7 @@ ChannelHandlerContext的API罗列在表<span class="number">6.10</span>
 
   <div class="article-tags">
   
-  <span></span> <a href="/blog/tags/Netty/">Netty</a>
+  <span></span> <a href="/tags/Netty/">Netty</a>
   </div>
 
 </div>
@@ -654,7 +654,7 @@ ChannelHandlerContext的API罗列在表<span class="number">6.10</span>
 <nav class="article-nav clearfix">
  
  <div class="prev" >
- <a href="/blog/2015/10/10/5-buffer/" title="Netty, 第五章 缓冲区--Buffer">
+ <a href="/2015/10/10/5-buffer/" title="Netty, 第五章 缓冲区--Buffer">
   <strong>上一篇：</strong><br/>
   <span>
   Netty, 第五章 缓冲区--Buffer</span>
@@ -663,7 +663,7 @@ ChannelHandlerContext的API罗列在表<span class="number">6.10</span>
 
 
 <div class="next">
-<a href="/blog/2015/10/10/7-codec/"  title="Netty, 第七章 Codec框架">
+<a href="/2015/10/10/7-codec/"  title="Netty, 第七章 Codec框架">
  <strong>下一篇：</strong><br/> 
  <span>Netty, 第七章 Codec框架
 </span>
@@ -696,7 +696,7 @@ ChannelHandlerContext的API罗列在表<span class="number">6.10</span>
 		<ul class="clearfix">
 		
 			
-				<li><a href="/blog/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
+				<li><a href="/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
 			
 		
 		</ul>
@@ -755,16 +755,16 @@ ChannelHandlerContext的API罗列在表<span class="number">6.10</span>
 		<p class="copyright">
 		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a>  © 2015 
 		
-		<a href="/blog/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
+		<a href="/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
 		
 		
 		</p>
 </div>
 </footer>
-    <script src="/blog/js/jquery-2.0.3.min.js"></script>
-<script src="/blog/js/jquery.imagesloaded.min.js"></script>
-<script src="/blog/js/gallery.js"></script>
-<script src="/blog/js/jquery.qrcode-0.12.0.min.js"></script>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
 
 <script type="text/javascript">
 $(document).ready(function(){ 
@@ -925,9 +925,9 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
 <!-- Totop Begin -->
 
 	<div id="totop">
-	<a title="返回顶部"><img src="/blog/img/scrollup.png"/></a>
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
 	</div>
-	<script src="/blog/js/totop.js"></script>
+	<script src="/js/totop.js"></script>
 
 <!-- Totop End -->
 

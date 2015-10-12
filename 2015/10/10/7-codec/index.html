@@ -29,10 +29,10 @@ Encoders
 Codecs
 
 在前面的章节中，我们讨论了通过不同的方式在处理流程中使用Handler拦截动作和数据，通过使用ChannelHandler和它的相关类可以实现大多数的应用逻辑。但是标准的架构上通常有特定的框架，一些通用的处理过程将被抽象成特定的实现，它可以节省大量的开发时间。在本章中，我们会学习编码(encodng">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/71toint.png">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/72inttostr.png">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/73shorttoByteencoder.png">
-<meta property="og:updated_time" content="2015-10-11T06:14:14.510Z">
+<meta property="og:image" content="http://iamleaf.github.io/img/71toint.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/72inttostr.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/73shorttoByteencoder.png">
+<meta property="og:updated_time" content="2015-10-12T02:32:26.657Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Netty, 第七章 Codec框架">
 <meta name="twitter:description" content="Netty CodeC 框架本章节主要介绍：
@@ -45,11 +45,11 @@ Codecs
 
     
     
-    <link rel="icon" href="/blog/img/favicon.ico">
+    <link rel="icon" href="/img/favicon.ico">
     
     
-    <link rel="apple-touch-icon" href="/blog/img/jacman.jpg">
-    <link rel="apple-touch-icon-precomposed" href="/blog/img/jacman.jpg">
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
     
     <link rel="stylesheet" href="../../../../css/style.css" type="text/css">
 </head>
@@ -60,11 +60,11 @@ Codecs
 <div>
 		
 			<div id="imglogo">
-				<a href="/blog/"><img src="/blog/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
+				<a href="/"><img src="/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
 			</div>
 			
 			<div id="textlogo">
-				<h1 class="site-name"><a href="/blog/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
+				<h1 class="site-name"><a href="/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
 				<h2 class="blog-motto">宁静致远</h2>
 			</div>
 			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
@@ -73,11 +73,11 @@ Codecs
 				<ul>
 					<ul>
 					 
-						<li><a href="/blog/">Home</a></li>
+						<li><a href="/">Home</a></li>
 					
-						<li><a href="/blog/archives">Archives</a></li>
+						<li><a href="/archives">Archives</a></li>
 					
-						<li><a href="/blog/about">About</a></li>
+						<li><a href="/about">About</a></li>
 					
 					<li>
  					
@@ -99,11 +99,11 @@ Codecs
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/blog/2015/10/10/7-codec/" title="Netty, 第七章 Codec框架" itemprop="url">Netty, 第七章 Codec框架</a>
+      <a href="/2015/10/10/7-codec/" title="Netty, 第七章 Codec框架" itemprop="url">Netty, 第七章 Codec框架</a>
   </h1>
   <p class="article-author">By
        
-		<a href="/blog/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
+		<a href="/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
 		
   <p class="article-time">
     <time datetime="2015-10-10T09:06:08.000Z" itemprop="datePublished"> 发表于 2015-10-10</time>
@@ -156,7 +156,7 @@ Codecs
 </table>
 <p>Suppose we receive a byte stream containing simple integers, each to be handled separately.<br>In this case we will read each integer from the inbound ByteBuf and pass it to the next<br>ChannelInboundHandler in the pipeline. To “decode” the byte stream into integers we will<br>extend ByteToMessageDecoder. The implementation class, “ToIntegerDecoder”, is shown in<br>Figure 7.1.</p>
 <p>假设我们收到一个包含了简单整数(Integer)的字节流，每个整数都会被单独处理。在这个场景里我们从入站ByteBuf中读取每个整数，并且把它传递给下一个ChannelInboundHandler。<br>为了实现这个转换，我们通过扩展了ByteToMessageDecoder类实现了ToIntegerDecoder整数解码器。如图7.1所示,</p>
-<h5 id="ToIntegerDecoder整数解码器示意图">ToIntegerDecoder整数解码器示意图</h5><p><img src="/blog/img/71toint.png" alt="7.1 ToIntegerDecoder整数解码器 "></p>
+<h5 id="ToIntegerDecoder整数解码器示意图">ToIntegerDecoder整数解码器示意图</h5><p><img src="/img/71toint.png" alt="7.1 ToIntegerDecoder整数解码器 "></p>
 <p>从入站ByteBuf中一次读取4个字节，转化为整数，并且添加到List中。List将会被送到下一个ChannelInboundHandler里.如源码 7.1 所示.</p>
 <h5 id="源码_7-1_使用_ByteToMessageDecoder_that_decodes_to_Integer">源码 7.1 使用 ByteToMessageDecoder that decodes to Integer</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ToIntegerDecoder</span> <span class="keyword">extends</span> <span class="title">ByteToMessageDecoder</span> </span>&#123; <span class="comment">//扩展ByteToMessageDecoder</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">decode</span><span class="params">(ChannelHandlerContext ctx, ByteBuf in, List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (in.readableBytes() &gt;= <span class="number">4</span>) &#123; <span class="comment">//检查是否可读字节长度大于4，Integer是4个字节长</span></span><br><span class="line">        out.add(in.readInt()); <span class="comment">//从ByteBuf中读取整数，添加到List中</span></span><br><span class="line">    &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>尽管ByteToMessageDecoder抽象类简化编写ToIntegerDeocder，你可能发现每次读取需要检查入站的ByteBuf中是否有足够的数据会有点烦。<br>在下面的小节中我们会使用ReplayingDeocder来消除这个烦恼.</p>
@@ -209,7 +209,7 @@ Codecs
 </blockquote>
 <p>传入解码decode方法的参数不在是ByteBuf(因为已经在前一个例子中解码过了)，而是整数-Integer. 如下图所示，解码后的字符会被转发到下一个ChannelInboundHander中，</p>
 <p>#####图 7.2.整数解码到字符过程</p>
-<p><img src="/blog/img/72inttostr.png" alt="72整数解码到字符"></p>
+<p><img src="/img/72inttostr.png" alt="72整数解码到字符"></p>
 <p>完整的源码如下：</p>
 <h5 id="源码_7-3_MessageToMessageDecoder_-_Integer_to_String">源码 7.3 MessageToMessageDecoder - Integer to String</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IntegerToStringDecoder</span> <span class="keyword">extends</span>  <span class="title">MessageToMessageDecoder</span>&lt;<span class="title">Integer</span>&gt; </span>&#123; <span class="comment">//继承抽象类</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">decode</span><span class="params">(ChannelHandlerContext ctx, Integer msg  List&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        out.add(String.valueOf(msg)); <span class="comment">//转成字符格式</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <h4 id="7-2-4_解码时候如何处理过长的帧(Frame)">7.2.4  解码时候如何处理过长的帧(Frame)</h4><p>Netty是一个异步的网络编程框架，那么它需要在内存缓冲字节数据直到你可以去解码这些数据，然而内存总是有限的，<br>所有一个良好的设计必须考虑到如何处理这种共同的问题。Netty提供了一个通用的帧过长的异常TooLongFrameException来处理这个问题,<br>可以在解码器中设置一个最大的字节限额，如果超出这个限额那么就抛出TooLongFrameException.然后就由解码器的编写者决定如何处理它。<br>在某些协议中，如HTTP遇到这种情况可以给对方发一种特殊响应HTTP RESPONSE。有些协议可能没有这个支持，那么这个时候的选择可能是直接关闭这个连接。</p>
@@ -238,7 +238,7 @@ Codecs
 </table>
 <p>这个类只有一个方法，而解码器的基类却有两个方法的原因是，解码器通常需要在Channel关闭前产生最后的一个消息。而解码器却不需要，因为在Channel关闭后产生一个消息也没有用。</p>
 <p>下面的例子会更好的理解编码器，我们产生了一个Short值，然后把它编码成字节数据，发送到网络。我们提供一个ShortToByteEncoder来实现这个能力，图7.3 显示了这个过程，</p>
-<h5 id="图7-3_ShortToByteEncoder的流程">图7.3 ShortToByteEncoder的流程</h5><p><img src="/blog/img/73shorttoByteencoder.png" alt="73ShortToByteEncoder的流程"></p>
+<h5 id="图7-3_ShortToByteEncoder的流程">图7.3 ShortToByteEncoder的流程</h5><p><img src="/img/73shorttoByteencoder.png" alt="73ShortToByteEncoder的流程"></p>
 <p>图 7.3 显示了编码器收到了Short类型的消息， 编码，写入到ByteBuf中，这个ByteBuf被转发到了下一个ChannelOutboundHandler中，每个Short类型的消息占2个字节。</p>
 <p>实现的源码如下：</p>
 <h5 id="源码7-5">源码7.5</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ShortToByteEncoder</span> <span class="keyword">extends</span> <span class="title">MessageToByteEncoder</span>&lt;<span class="title">Short</span>&gt; </span>&#123; <span class="comment">//继承抽象基础类</span></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">encode</span><span class="params">(ChannelHandlerContext ctx, Short msg, ByteBuf out)</span>    <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        out.writeShort(msg); <span class="comment">//写入Short类型值到ByteBuf中</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -334,7 +334,7 @@ Codecs
 
   <div class="article-tags">
   
-  <span></span> <a href="/blog/tags/Netty/">Netty</a>
+  <span></span> <a href="/tags/Netty/">Netty</a>
   </div>
 
 </div>
@@ -357,7 +357,7 @@ Codecs
 <nav class="article-nav clearfix">
  
  <div class="prev" >
- <a href="/blog/2015/10/10/6-handler/" title="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline">
+ <a href="/2015/10/10/6-handler/" title="Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline">
   <strong>上一篇：</strong><br/>
   <span>
   Netty, 第六章 渠道处理器和管道--ChannelHandler/ChannelPipeline</span>
@@ -391,7 +391,7 @@ Codecs
 		<ul class="clearfix">
 		
 			
-				<li><a href="/blog/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
+				<li><a href="/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
 			
 		
 		</ul>
@@ -450,16 +450,16 @@ Codecs
 		<p class="copyright">
 		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a>  © 2015 
 		
-		<a href="/blog/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
+		<a href="/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
 		
 		
 		</p>
 </div>
 </footer>
-    <script src="/blog/js/jquery-2.0.3.min.js"></script>
-<script src="/blog/js/jquery.imagesloaded.min.js"></script>
-<script src="/blog/js/gallery.js"></script>
-<script src="/blog/js/jquery.qrcode-0.12.0.min.js"></script>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
 
 <script type="text/javascript">
 $(document).ready(function(){ 
@@ -620,9 +620,9 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
 <!-- Totop Begin -->
 
 	<div id="totop">
-	<a title="返回顶部"><img src="/blog/img/scrollup.png"/></a>
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
 	</div>
-	<script src="/blog/js/totop.js"></script>
+	<script src="/js/totop.js"></script>
 
 <!-- Totop End -->
 

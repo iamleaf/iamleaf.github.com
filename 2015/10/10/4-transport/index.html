@@ -31,10 +31,10 @@ Local
 Embedded
 
 基于网络的应用提供了人机沟通的渠道，当然也会从一个地方往另一个地方移动数据，正确的完成移动数据的动作是大部分是依靠网路传输来实现的，但是在网络上传输的东西是一样的，就是字节（Byte over wire）。传输(Transport)的">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/42channel_api.png">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/43nio-transport-process.png">
-<meta property="og:image" content="http://iamleaf.github.io/blog/img/43oio-transport-process.png">
-<meta property="og:updated_time" content="2015-10-11T01:33:08.975Z">
+<meta property="og:image" content="http://iamleaf.github.io/img/42channel_api.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/43nio-transport-process.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/43oio-transport-process.png">
+<meta property="og:updated_time" content="2015-10-12T02:31:59.877Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Netty, 第四章 传输--Transport">
 <meta name="twitter:description" content="Netty 传输 (Transport)本章的内容包含了各种传输(Transport)，以及它们的API和适用场景
@@ -48,11 +48,11 @@ Embedded
 
     
     
-    <link rel="icon" href="/blog/img/favicon.ico">
+    <link rel="icon" href="/img/favicon.ico">
     
     
-    <link rel="apple-touch-icon" href="/blog/img/jacman.jpg">
-    <link rel="apple-touch-icon-precomposed" href="/blog/img/jacman.jpg">
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
     
     <link rel="stylesheet" href="../../../../css/style.css" type="text/css">
 </head>
@@ -63,11 +63,11 @@ Embedded
 <div>
 		
 			<div id="imglogo">
-				<a href="/blog/"><img src="/blog/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
+				<a href="/"><img src="/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
 			</div>
 			
 			<div id="textlogo">
-				<h1 class="site-name"><a href="/blog/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
+				<h1 class="site-name"><a href="/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
 				<h2 class="blog-motto">宁静致远</h2>
 			</div>
 			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
@@ -76,11 +76,11 @@ Embedded
 				<ul>
 					<ul>
 					 
-						<li><a href="/blog/">Home</a></li>
+						<li><a href="/">Home</a></li>
 					
-						<li><a href="/blog/archives">Archives</a></li>
+						<li><a href="/archives">Archives</a></li>
 					
-						<li><a href="/blog/about">About</a></li>
+						<li><a href="/about">About</a></li>
 					
 					<li>
  					
@@ -102,11 +102,11 @@ Embedded
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/blog/2015/10/10/4-transport/" title="Netty, 第四章 传输--Transport" itemprop="url">Netty, 第四章 传输--Transport</a>
+      <a href="/2015/10/10/4-transport/" title="Netty, 第四章 传输--Transport" itemprop="url">Netty, 第四章 传输--Transport</a>
   </h1>
   <p class="article-author">By
        
-		<a href="/blog/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
+		<a href="/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
 		
   <p class="article-time">
     <time datetime="2015-10-10T14:25:26.000Z" itemprop="datePublished"> 发表于 2015-10-10</time>
@@ -145,7 +145,7 @@ Embedded
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NettyNioServer</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">server</span><span class="params">(<span class="keyword">int</span> port)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> ByteBuf buf = Unpooled.unreleasableBuffer(</span><br><span class="line">                Unpooled.copiedBuffer(<span class="string">"Hi!\r\n"</span>, Charset.forName(<span class="string">"UTF-8"</span>)));</span><br><span class="line">        NioEventLoopGroup group = <span class="keyword">new</span> NioEventLoopGroup();<span class="comment">//初始化非阻塞的eventloop组</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            ServerBootstrap b = <span class="keyword">new</span> ServerBootstrap();</span><br><span class="line">            b.group(group)</span><br><span class="line">                    .channel(NioServerSocketChannel.class)<span class="comment">//使用非阻塞的channel类</span></span><br><span class="line">                    .localAddress(<span class="keyword">new</span> InetSocketAddress(port))</span><br><span class="line">                    .childHandler(<span class="keyword">new</span> ChannelInitializer&lt;SocketChannel&gt;() &#123;</span><br><span class="line">                        <span class="annotation">@Override</span></span><br><span class="line">                        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(SocketChannel ch)</span></span><br><span class="line">                                <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                            ch.pipeline().addLast(<span class="keyword">new</span> ChannelInboundHandlerAdapter() &#123;</span><br><span class="line">                                <span class="annotation">@Override</span></span><br><span class="line">                                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelActive</span><span class="params">(ChannelHandlerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                                    ctx.writeAndFlush(buf.duplicate()).addListener(ChannelFutureListener.CLOSE);</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;);</span><br><span class="line">            ChannelFuture f = b.bind().sync();</span><br><span class="line">            f.channel().closeFuture().sync();</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            group.shutdownGracefully().sync();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>在上述Netty的两个例子里，我们涉及到了Netty的抽象传输API，如Channel,ChannelPipe,ChannelHandler等，下面我们详细的来看一下这些传输API.</p>
 <h3 id="4-2_传输API">4.2 传输API</h3><p>Netty 传输API的核心是Channel接口,它定义了所有的出站(outbound)动作。下图 显示了Channel的类层次结构：</p>
-<p><img src="/blog/img/42channel_api.png" alt="Channel API 类层次结构"></p>
+<p><img src="/img/42channel_api.png" alt="Channel API 类层次结构"></p>
 <p>上图显示了一个Channel都分配一个ChannelPipeline和ChannelConfig。ChannelConfig包含所有Channel的配置信息，并且允许运行时更改这些信息。显然各种传输的实现不同，它们的配置信息也会不同。所以传输会实现ChannelConfig接口的各种实现类，可以通过javadoc查找ChannelConfig的实现类。<br>ChannelPipeline包含了所有的ChannelHandler的实例，这些ChannelHandler实例来处理出站和入站的数据和事件。这些ChannelHandler的实现处理了应用逻辑，包括数据传输和事件处理。典型的ChannelHandler的用处有：</p>
 <ul>
 <li>改变数据传输的格式</li>
@@ -272,7 +272,7 @@ Embedded
 </tbody>
 </table>
 <p> Netty的NIO 传输在内部使用这个模型去接受和发送数据, Netty给用户使用的传输API已经完全隐藏了内部的实现细节。就像前面讲到的一样，这个API对所有的传输都是一样的。下图显示了传输的处理流程：</p>
-<p><img src="/blog/img/43nio-transport-process.png" alt="NIO传输处理流程"></p>
+<p><img src="/img/43nio-transport-process.png" alt="NIO传输处理流程"></p>
 <ol>
 <li>新的Channel注册到Selector</li>
 <li>Selector处理Channel的状态改变</li>
@@ -287,7 +287,7 @@ Embedded
 <p>还有个功能只有在Netty NIO 传输中才有，就是所谓的”zero-file-copy”. 它允许你可以快速有效的传送内容。即从文件系统移动到网络堆栈中，而无需想从内核空间拷贝到用户空间。在Netty这个是通过FileRegion.transferTo()来实现的，内部也是通过java.nio.channels.FileChannel.transferTo()来实现的。<br>然而也不是所有的操作系统都支持这个特性。此外，你不能在一个文件系统是加密的操作系统中使用。但是只要是传输未加工过的数据(raw content)的都是可以的。</p>
 </blockquote>
 <h4 id="4-3-2_OIO_旧的阻塞输入输出(Old_Blocking_I/O_)">4.3.2 OIO 旧的阻塞输入输出(Old Blocking I/O )</h4><p>在Netty中OIO代表一种妥协，它通过Netty的通用API访问，不是异步的。但又是构建在同步的java.net的基础上。有些拗口。但是仔细想一下，也是能理解。Netty号称是完全异步的、事件驱动的，但是作为一个框架也需要支持同步的场景。所以这就是个妥协，不可否认的是同步的OIO也是有它自己适用的场景的。<br>假如你需要迁移一些旧的遗留代码到Netty中，但是它使用了一些基础类库是采用阻塞调用的，如JDBC。这个时候把整个逻辑转化为异步的会比较困难。这个时候你可以选择短期内先使用OIO的传输，然后再迁移到完全异步的传输中。<br> 在Java.net的API中，通常有一个线程接受到达ServerSocket的新连接，然后创建一个新的线程在该连接上处理socket的请求。这个是必须的因为对于每个IO操作，java.net API都会阻塞直到动作完成，所以把所有的这些工作由一个线程来完成也是不合适的。一般来讲都会把这些新的请求递交给一个线程池中的一个线程或者一个eventloop组中的一个eventloop来处理。<br>但是每个动作会阻塞，对于eventloop来讲就会有些麻烦，因为对于eventloop来讲不能确定该动作需要阻塞多久，所以Netty中对于OIO使用了SOCKET的SO_TIMEOUT的属性。关于SO_TIME, JDK文档中是这样描述的“With this option set to a non-zero timeout, a call to accept() for this ServerSocket will block for only this amount of time. If the timeout expires, a java.net.SocketTimeoutException is raised”.就是说设置了SO_TIMEOUT=10那么对于ServerSocket的accept()方法仅仅阻塞10毫秒，如果超过10毫秒，那么将会抛出SocketTimeoutException 异常。对于Netty而言也是这样，在设置了SO_TIMEOUT之后，如果超时发生，Netty捕获这个异常，继续处理eventloop循环。这就是Netty这类异步框架支持OIO传输的唯一方法。这种方法带来的问题就是填写SocketTimeoutException的堆栈开销。下面是OIO的处理流程：</p>
-<p><img src="/blog/img/43oio-transport-process.png" alt="OIO传输处理流程"></p>
+<p><img src="/img/43oio-transport-process.png" alt="OIO传输处理流程"></p>
 <ol>
 <li>该线程分配给了这个Socket</li>
 <li>Socket连接到远端</li>
@@ -381,7 +381,7 @@ Embedded
 
   <div class="article-tags">
   
-  <span></span> <a href="/blog/tags/Netty/">Netty</a>
+  <span></span> <a href="/tags/Netty/">Netty</a>
   </div>
 
 </div>
@@ -405,7 +405,7 @@ Embedded
  
 
 <div class="next">
-<a href="/blog/2015/10/10/5-buffer/"  title="Netty, 第五章 缓冲区--Buffer">
+<a href="/2015/10/10/5-buffer/"  title="Netty, 第五章 缓冲区--Buffer">
  <strong>下一篇：</strong><br/> 
  <span>Netty, 第五章 缓冲区--Buffer
 </span>
@@ -438,7 +438,7 @@ Embedded
 		<ul class="clearfix">
 		
 			
-				<li><a href="/blog/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
+				<li><a href="/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
 			
 		
 		</ul>
@@ -497,16 +497,16 @@ Embedded
 		<p class="copyright">
 		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a>  © 2015 
 		
-		<a href="/blog/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
+		<a href="/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
 		
 		
 		</p>
 </div>
 </footer>
-    <script src="/blog/js/jquery-2.0.3.min.js"></script>
-<script src="/blog/js/jquery.imagesloaded.min.js"></script>
-<script src="/blog/js/gallery.js"></script>
-<script src="/blog/js/jquery.qrcode-0.12.0.min.js"></script>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
 
 <script type="text/javascript">
 $(document).ready(function(){ 
@@ -667,9 +667,9 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
 <!-- Totop Begin -->
 
 	<div id="totop">
-	<a title="返回顶部"><img src="/blog/img/scrollup.png"/></a>
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
 	</div>
-	<script src="/blog/js/totop.js"></script>
+	<script src="/js/totop.js"></script>
 
 <!-- Totop End -->
 
