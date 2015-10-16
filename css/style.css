@@ -78,6 +78,7 @@ table {
   border-collapse: separate;
   border-spacing: 0;
   vertical-align: middle;
+  table-layout:fixed;
 }
 caption,
 th,
