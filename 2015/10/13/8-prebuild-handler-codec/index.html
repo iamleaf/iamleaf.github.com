@@ -1,0 +1,841 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Netty, 第八章 内置的ChannelHandler和Codec | leaf&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Leaf Ye">
+    
+
+    
+    <meta name="description" content="第八章 内置的ChannelHandler和Codec本章提供了:
+
+为Netty 应用提供SSL/TLS安全支持
+构建Netty Http/Https应用
+处理空闲连接和超时– ideal connections, timeout
+解码基于分隔符和长度的协议–delimited and lengthss-based protocols
+写入大量数据–Write big data
+序列化–Seri">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty, 第八章 内置的ChannelHandler和Codec">
+<meta property="og:url" content="http://iamleaf.github.io/2015/10/13/8-prebuild-handler-codec/index.html">
+<meta property="og:site_name" content="leaf's blog">
+<meta property="og:description" content="第八章 内置的ChannelHandler和Codec本章提供了:
+
+为Netty 应用提供SSL/TLS安全支持
+构建Netty Http/Https应用
+处理空闲连接和超时– ideal connections, timeout
+解码基于分隔符和长度的协议–delimited and lengthss-based protocols
+写入大量数据–Write big data
+序列化–Seri">
+<meta property="og:image" content="http://iamleaf.github.io/img/81sslhandlerflow.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/82httprequest.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/83httpresponse.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/84websocket.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/85linebasehandler.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/86fixedlendecoder.png">
+<meta property="og:image" content="http://iamleaf.github.io/img/87lenfielddecoder.png">
+<meta property="og:updated_time" content="2015-10-16T12:48:56.766Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Netty, 第八章 内置的ChannelHandler和Codec">
+<meta name="twitter:description" content="第八章 内置的ChannelHandler和Codec本章提供了:
+
+为Netty 应用提供SSL/TLS安全支持
+构建Netty Http/Https应用
+处理空闲连接和超时– ideal connections, timeout
+解码基于分隔符和长度的协议–delimited and lengthss-based protocols
+写入大量数据–Write big data
+序列化–Seri">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="../../../../css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/logo.png" alt="leaf&#39;s blog" title="leaf&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
+				<h2 class="blog-motto">宁静致远</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">Home</a></li>
+					
+						<li><a href="/archives">Archives</a></li>
+					
+						<li><a href="/about">About</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="Search" />
+						<input type="hidden" name="q" value="site:iamleaf.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/10/13/8-prebuild-handler-codec/" title="Netty, 第八章 内置的ChannelHandler和Codec" itemprop="url">Netty, 第八章 内置的ChannelHandler和Codec</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
+		
+  <p class="article-time">
+    <time datetime="2015-10-13T02:52:48.000Z" itemprop="datePublished"> Published 2015-10-13</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#第八章_内置的ChannelHandler和Codec"><span class="toc-text">第八章 内置的ChannelHandler和Codec</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1_为Netty_应用提供SSL/TLS_安全功能支持"><span class="toc-text">8.1  为Netty 应用提供SSL/TLS 安全功能支持</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#图8-1_显示使用SslHandler的数据流"><span class="toc-text">图8.1 显示使用SslHandler的数据流</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#源码8-1_SslChannelInitializer类"><span class="toc-text">源码8.1 SslChannelInitializer类</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#源码8-2_Netty_例子中Echo_Server的SSL支持"><span class="toc-text">源码8.2 Netty 例子中Echo Server的SSL支持</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#表8-1_SslHandler类的方法"><span class="toc-text">表8.1 SslHandler类的方法</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2_构建_Netty_HTTP/HTTPS_应用"><span class="toc-text">8.2  构建 Netty HTTP/HTTPS 应用</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#8-2-1_HTTP_Decoder,_Encoder,_and_Codec"><span class="toc-text">8.2.1  HTTP Decoder, Encoder, and Codec</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#图8-2_Http_Request"><span class="toc-text">图8.2 Http Request</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#图8-3_Http_Response"><span class="toc-text">图8.3 Http Response</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#表_8-2_给HTTP_编码和解码器简介"><span class="toc-text">表 8.2 给HTTP 编码和解码器简介</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_8-3_给应用添加HTTP协议支持-"><span class="toc-text">源码 8.3 给应用添加HTTP协议支持.</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#8-2-2_HTTP_消息聚合_–_message_aggregation"><span class="toc-text">8.2.2  HTTP 消息聚合 – message aggregation</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#源码8-4_HTTP消息自动聚合"><span class="toc-text">源码8.4 HTTP消息自动聚合</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#8-2-3_HTTP_消息压缩"><span class="toc-text">8.2.3  HTTP 消息压缩</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_8-5_自动压缩HTTP_消息"><span class="toc-text">源码 8.5 自动压缩HTTP 消息</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#8-2-4_使用_HTTPS"><span class="toc-text">8.2.4  使用 HTTPS</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#8-6_HTTPS协议支持例子"><span class="toc-text">8.6 HTTPS协议支持例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#8-2-5_WebSocket_支持"><span class="toc-text">8.2.5  WebSocket 支持</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表8-3_WebSocket_Frames_类型"><span class="toc-text">表8.3 WebSocket Frames 类型</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_8-7_服务器端支持WebSocket"><span class="toc-text">源码 8.7 服务器端支持WebSocket</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#8-2-6_SPDY"><span class="toc-text">8.2.6  SPDY</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3_空闲连接和超时处理"><span class="toc-text">8.3  空闲连接和超时处理</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#列表8-4_处理空闲连接和超时的ChannelHandlers"><span class="toc-text">列表8.4 处理空闲连接和超时的ChannelHandlers</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#源码8-8_发送心跳信息"><span class="toc-text">源码8.8 发送心跳信息</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#源码_8-9_ReadTimeOutHandler_例子"><span class="toc-text">源码 8.9 ReadTimeOutHandler 例子</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#列表8-5_处理空闲连接和超时的ChannelHandlers"><span class="toc-text">列表8.5 处理空闲连接和超时的ChannelHandlers</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#源码8-8_发送心跳信息-1"><span class="toc-text">源码8.8 发送心跳信息</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#源码_8-9_ReadTimeOutHandler_例子-1"><span class="toc-text">源码 8.9 ReadTimeOutHandler 例子</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-4_解码基于分隔符和长度的协议"><span class="toc-text">8.4  解码基于分隔符和长度的协议</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#8-4-1_基于分隔符的协议"><span class="toc-text">8.4.1  基于分隔符的协议</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#列表8-6_分隔符解码器"><span class="toc-text">列表8.6 分隔符解码器</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#图_8-5_处理基于行的帧"><span class="toc-text">图 8.5 处理基于行的帧</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_8-10_处理基于行的帧例子"><span class="toc-text">源码 8.10 处理基于行的帧例子</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_8-11_基于行处理例子2"><span class="toc-text">源码 8.11 基于行处理例子2</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码8-12_自定义分割符例子"><span class="toc-text">源码8.12 自定义分割符例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#8-4-2_基于长度的协议"><span class="toc-text">8.4.2  基于长度的协议</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#列表8-7_长度解码器"><span class="toc-text">列表8.7 长度解码器</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#图_8-6_FixedLengthFrameDecoder操作"><span class="toc-text">图 8.6 FixedLengthFrameDecoder操作</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#图_8-7_LengthFieldBasedFrameDecoder操作"><span class="toc-text">图 8.7 LengthFieldBasedFrameDecoder操作</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_8-13_LengthFieldBasedFrameDecoder例子"><span class="toc-text">源码 8.13 LengthFieldBasedFrameDecoder例子</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-5_写入大量数据"><span class="toc-text">8.5  写入大量数据</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#源码_8-14_文件_zero-copy传输例子"><span class="toc-text">源码 8.14 文件 zero-copy传输例子</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#列表_8-8_ChunkInput的实现类"><span class="toc-text">列表 8.8 ChunkInput的实现类</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#源码_8-15_使用File传输文件内容例子"><span class="toc-text">源码 8.15 使用File传输文件内容例子</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-6_序列化数据"><span class="toc-text">8.6  序列化数据</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#8-6-1_JDK_序列化"><span class="toc-text">8.6.1  JDK 序列化</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#列表8-9_Netty_JDK序列化兼容类"><span class="toc-text">列表8.9 Netty JDK序列化兼容类</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#8-6-2_使用_JBoss_Marshalling_序列化"><span class="toc-text">8.6.2  使用 JBoss Marshalling 序列化</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#列表_8-10_JBoss_Marshalling_codecs"><span class="toc-text">列表 8.10 JBoss Marshalling codecs</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#8-16_JBoss_Marshalling例子"><span class="toc-text">8.16 JBoss Marshalling例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#8-6-3_ProtoBuf_序列化"><span class="toc-text">8.6.3   ProtoBuf 序列化</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#列表_8-11_ProtoBuf_Codec"><span class="toc-text">列表 8.11 ProtoBuf Codec</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#8-17_使用ProtoBuf的例子"><span class="toc-text">8.17 使用ProtoBuf的例子</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-7_总结"><span class="toc-text">8.7  总结</span></a></li></ol></li></ol>
+		
+		</div>
+		
+		<h2 id="第八章_内置的ChannelHandler和Codec">第八章 内置的ChannelHandler和Codec</h2><p>本章提供了:</p>
+<ul>
+<li>为Netty 应用提供SSL/TLS安全支持</li>
+<li>构建Netty Http/Https应用</li>
+<li>处理空闲连接和超时– ideal connections, timeout</li>
+<li>解码基于分隔符和长度的协议–delimited and lengthss-based protocols</li>
+<li>写入大量数据–Write big data</li>
+<li>序列化–Serialization</li>
+</ul>
+<p>Netty 为一系列开箱即用(out of box)通用协议提供了Codec和Handler，大大减少了你为处理这些通用协议编写底层代码的时间。在本章我们将讨论这些工具和它们带来的好处，包括SSL/TLS,WebSocket,Google SPDY,使用数据压缩技术提升HTTP性能.</p>
+<h3 id="8-1_为Netty_应用提供SSL/TLS_安全功能支持">8.1  为Netty 应用提供SSL/TLS 安全功能支持</h3><p>数据隐私是现在比较关注的话题，作为开发者我们需要在技术上做好准备。至少而言，我们需要熟悉构架在其他协议基础上实现数据安全的加密协议如SSL，TLS16等。 显然你进入一个支持HTTPS协议的网站要比普通的要安全的多了。当然还有些不是基于HTTP的协议的应用，如Email邮件使用安全的SMTP(SMTPS)邮件服务,甚至一些关系型数据库。为了支持SSL/TLS，Java提供了javax.net.ssl API.其中一些类如SslContext,SslEngine使得实现加密和解密消息变得相当的直观。Netty 利用了这些API,使用Netty的方式，即实现了基于ChannelHandler接口的SslHandler。在内部采用JDK本身的SslEngineAPI.</p>
+<h4 id="图8-1_显示使用SslHandler的数据流">图8.1 显示使用SslHandler的数据流</h4><p><img src="/img/81sslhandlerflow.png" alt="SslHandler数据流"></p>
+<ol>
+<li>加密的入站数据被SslHandler拦截，并且被解密</li>
+<li>被SslHandler解密后的数据</li>
+<li>解密后的原始信息被传递过SslHandler</li>
+<li>SslHandler加密原始数据，数据出站</li>
+</ol>
+<p>源码8.1显示了一个SslHandler是如何被ChannelInitializer加入到ChannelPipeline中的。(回顾一下ChannelInitializer是用来在Channel注册的时候设置ChannelPipeline的)</p>
+<h4 id="源码8-1_SslChannelInitializer类">源码8.1 SslChannelInitializer类</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SslChannelInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt;</span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> SSLContext context;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> client;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> startTls;</span><br><span class="line">    <span class="comment">////在构造器中传入SSLContext,如果是客户端，需要使用变量startTls.</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SslChannelInitializer</span><span class="params">(SSLContext context,</span><br><span class="line">        <span class="keyword">boolean</span> client, <span class="keyword">boolean</span> startTls)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.context = context;</span><br><span class="line">        <span class="keyword">this</span>.client = client;</span><br><span class="line">        <span class="keyword">this</span>.startTls = startTls;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">//从SSLContext中获取一个SSLEngine</span></span><br><span class="line">        SSLEngine engine = context.createSSLEngine();</span><br><span class="line"></span><br><span class="line">        engine.setUseClientMode(client); <span class="comment">//设置客户端还是服务端</span></span><br><span class="line">        ch.pipeline().addFirst(<span class="string">"ssl"</span>,</span><br><span class="line">        <span class="keyword">new</span> SslHandler(engine, startTls)); <span class="comment">//添加SslHandler作为第一个Handler</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="源码8-2_Netty_例子中Echo_Server的SSL支持">源码8.2 Netty 例子中Echo Server的SSL支持</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">    <span class="comment">// Configure SSL.</span></span><br><span class="line">    <span class="keyword">final</span> SslContext sslCtx;</span><br><span class="line">    <span class="comment">//创建SSLContext</span></span><br><span class="line">    <span class="keyword">if</span> (SSL) &#123;</span><br><span class="line">        SelfSignedCertificate ssc = <span class="keyword">new</span> SelfSignedCertificate();</span><br><span class="line">        sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        sslCtx = <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Configure the server.</span></span><br><span class="line">    EventLoopGroup bossGroup = <span class="keyword">new</span> NioEventLoopGroup(<span class="number">4</span>);</span><br><span class="line">    EventLoopGroup workerGroup = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        ServerBootstrap b = <span class="keyword">new</span> ServerBootstrap();</span><br><span class="line">        b.group(bossGroup, workerGroup)</span><br><span class="line">         .channel(NioServerSocketChannel.class)</span><br><span class="line">         .option(ChannelOption.SO_BACKLOG, <span class="number">100</span>)</span><br><span class="line">         .handler(<span class="keyword">new</span> LoggingHandler(LogLevel.DEBUG))</span><br><span class="line">         .childHandler(<span class="keyword">new</span> ChannelInitializer&lt;SocketChannel&gt;() &#123;</span><br><span class="line">             <span class="annotation">@Override</span></span><br><span class="line">             <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(SocketChannel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                 ChannelPipeline p = ch.pipeline();</span><br><span class="line">                 <span class="keyword">if</span> (sslCtx != <span class="keyword">null</span>) &#123;</span><br><span class="line">                     <span class="comment">//创建SslHandler，添加到第一个位置Handler</span></span><br><span class="line">                     p.addLast(sslCtx.newHandler(ch.alloc()));</span><br><span class="line">                 &#125;</span><br><span class="line">                 p.addLast(<span class="keyword">new</span> LoggingHandler(LogLevel.INFO));</span><br><span class="line">                 p.addLast(<span class="keyword">new</span> EchoServerHandler());</span><br><span class="line">             &#125;</span><br><span class="line">         &#125;);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Start the server.</span></span><br><span class="line">        ChannelFuture f = b.bind(PORT).sync();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Wait until the server socket is closed.</span></span><br><span class="line">        f.channel().closeFuture().sync();</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="comment">// Shut down all event loops to terminate all threads.</span></span><br><span class="line">        bossGroup.shutdownGracefully();</span><br><span class="line">        workerGroup.shutdownGracefully();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在大多数的情况下，SslHandler会是ChannelPipeline中的第一个ChannelHandler。这样才能确保数据加密发生在第一个环节，其他的ChannelHandler才能对解码后的数据处理.</p>
+<p>SslHandler有些有用的方法如表8.1所示，如当SSL握手期间，双方校验对方，并在加密方法上达成一致。你可以在SSL/TLS握手完成时候配置SslHandler修改其行为或者发出通知，之后所有的数据都会被加密。<br>SSL/TLS握手将会被自动执行。</p>
+<h4 id="表8-1_SslHandler类的方法">表8.1 SslHandler类的方法</h4><table>
+<thead>
+<tr>
+<th style="text-align:left"><em>名字</em></th>
+<th style="text-align:left"><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">setHandshakeTimeout(…), setHandshakeTimeoutMillis(…),getHandshakeTimeoutMillis()</td>
+<td style="text-align:left">设置和获取超时时间,handshake之后ChannelFuture会得到失败通知</td>
+</tr>
+<tr>
+<td style="text-align:left">setCloseNotifyTimeout(…) setCloseNotifyTimeoutMillis(…) getCloseNotifyTimeoutMillis()</td>
+<td style="text-align:left">设置和获取关闭连接后的超时，如果在指定的时间内关闭失败，则在ChannelFuture中获取通知</td>
+</tr>
+<tr>
+<td style="text-align:left">handshakeFuture()</td>
+<td style="text-align:left">当SSL握手完成时候返回一个ChannelFuture如果之前已经握手完成了，则返回之前握手的结果</td>
+</tr>
+<tr>
+<td style="text-align:left">close(…)</td>
+<td style="text-align:left">设置关闭,请求关闭和销毁底层SslEngine.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="8-2_构建_Netty_HTTP/HTTPS_应用">8.2  构建 Netty HTTP/HTTPS 应用</h3><p>随着移动网络的日益发展，HTTP/HTTPS 已经是最通用的应用协议. 基本上每个公司都有自己的网页可以通过HTTP/HTTPS访问，这个不仅仅是HTTP协议唯一的用途，许多组织和公司还把自己的服务通过HTTP(S)导出成WebService API，这个就可以独立于平台来使用这些服务。 我们来讨论一下如何使用Netty提供的ChannelHandler，来使用HTTP(S)而无需使用自己的Codec.</p>
+<h4 id="8-2-1_HTTP_Decoder,_Encoder,_and_Codec">8.2.1  HTTP Decoder, Encoder, and Codec</h4><p>HTTP 是基于请求/响应 模式来提供服务的: 一个客户端发送一个HTTP请求，服务器根据请求发送回一个HTTP响应。 Netty 提供各种编码和解码器来简化操纵HTTP协议。图8.2,8.3 显示了一个Netty HTTP请求和响应的结构:</p>
+<h5 id="图8-2_Http_Request">图8.2 Http Request</h5><p><img src="/img/82httprequest.png" alt="httprequest"></p>
+<ol>
+<li>第一部分Http 请求头</li>
+<li>HttpContent 内容包含数据，可能跟随了一个或者多个HTTPContent.</li>
+<li>LastHttpContent 子类型表示HTTP请求的尾部.也可能包括了尾部头</li>
+<li>完整的 HTTP 请求</li>
+</ol>
+<h5 id="图8-3_Http_Response">图8.3 Http Response</h5><p><img src="/img/83httpresponse.png" alt="httpresponse"></p>
+<ol>
+<li>第一部分Http 响应头</li>
+<li>HttpContent 内容包含数据，可能跟随了一个或者多个HTTPContent.</li>
+<li>LastHttpContent 子类型表示HTTP请求的尾部.也可能包括了尾部头</li>
+<li>完整的 HTTP 响应</li>
+</ol>
+<p>如图8.2和8.3所示，HTTP的请求、响应可能有多个数据部分组成，总有一个LastHttpContent结尾。FullHttpRequest 和 FullHttpResponse消息是特定的子类型，表示一个完整的HTTP响应和请求。所有的这些HTTP消息(FullHttpRequest, LastHttpContent以及在表8.2列出的等)都实现HttpObject接口.</p>
+<h5 id="表_8-2_给HTTP_编码和解码器简介">表 8.2 给HTTP 编码和解码器简介</h5><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HttpRequestEncoder</td>
+<td>编码 HttpRequest, HttpContent, LastHttpContent 消息到字节码.</td>
+</tr>
+<tr>
+<td>HttpResponseEncoder</td>
+<td>编码 HttpResponse, HttpContent, LastHttpContent 消息到字节码</td>
+</tr>
+<tr>
+<td>HttpRequestDecoder</td>
+<td>解码字节到HttpRequest, HttpContent，LastHttpContent消息</td>
+</tr>
+<tr>
+<td>HttpResponseDecoder</td>
+<td>解码字节到HttpResponse, HttpContent,LastHttpContent 消息</td>
+</tr>
+</tbody>
+</table>
+<p>Listing 8.2 shows how simple it is to add support for HTTP to your application. Merely add the<br>correct ChannelHandlers to the ChannelPipeline.<br>源码 8.3 显示了给应用添加HTTP支持是多么简单,只需给ChannelPipeline添加合适的ChannelHander就搞定了。</p>
+<h5 id="源码_8-3_给应用添加HTTP协议支持-">源码 8.3 给应用添加HTTP协议支持.</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HttpPipelineInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> client;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">HttpDecoderEncoderInitializer</span><span class="params">(<span class="keyword">boolean</span> client)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.client = client;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        <span class="keyword">if</span> (client) &#123;</span><br><span class="line">            <span class="comment">//客户端添加HttpResponseDecoder支持Http响应解码</span></span><br><span class="line">            pipeline.addLast(<span class="string">"decoder"</span>, <span class="keyword">new</span> HttpResponseDecoder());</span><br><span class="line">            <span class="comment">//客户端添加HttpRequestEncoder支持Http请求编码</span></span><br><span class="line">            pipeline.addLast(<span class="string">"encoder"</span>, <span class="keyword">new</span> HttpRequestEncoder());</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">//服务端添加HttpRequestDecoder,支持HTTP请求解码</span></span><br><span class="line">            pipeline.addLast(<span class="string">"decoder"</span>, <span class="keyword">new</span> HttpRequestDecoder());</span><br><span class="line">            <span class="comment">//服务端添加HTTPResponseEncoder支持HTTP响应编码</span></span><br><span class="line">            pipeline.addLast(<span class="string">"encoder"</span>, <span class="keyword">new</span> HttpResponseEncoder());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="8-2-2_HTTP_消息聚合_–_message_aggregation">8.2.2  HTTP 消息聚合 – message aggregation</h4><p>在ChannelPipeline中添加ChannelInitialzer后，你就可以操纵各种HTTPObject消息了，但是HTTP响应和请求是由好几个部分组成的，你还需要把几块消息组合成一个完整的HTTP请求和响应.为了避免这个繁琐的过程，Netty提供了一个聚合器,可以聚合消息到FullHttpRequest 和 FullHttpResponse 消息. 之后你就是看到完整的消息了。 这个方式有些轻微的开销，由于各个消息需要被缓冲在一个完整的消息到达后才能被送到下一个ChannelHandler中。好处就是你无需关心消息分段的问题。</p>
+<p>使用自动的消息聚合功能就是简单的添加一个ChannelHandler到ChannelPipeline中，源码8.4显示这个例子:</p>
+<h5 id="源码8-4_HTTP消息自动聚合">源码8.4 HTTP消息自动聚合</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HttpAggregatorInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> isClient;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">HttpAggregatorInitializer</span><span class="params">(<span class="keyword">boolean</span> isClient)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.isClient = isClient;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (isClient) &#123;</span><br><span class="line">            <span class="comment">//添加客户端HttpClientCodec</span></span><br><span class="line">            pipeline.addLast(<span class="string">"codec"</span>, <span class="keyword">new</span> HttpClientCodec());</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">//添加服务端HTTPServerCodec</span></span><br><span class="line">            pipeline.addLast(<span class="string">"codec"</span>, <span class="keyword">new</span> HttpServerCodec());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//添加HTTPObjectAggregator，使用最大消息尺寸为512k</span></span><br><span class="line">        pipeline.addLast(<span class="string">"aggegator"</span>, <span class="keyword">new</span> HttpObjectAggregator(<span class="number">512</span> * <span class="number">1024</span>));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="8-2-3_HTTP_消息压缩">8.2.3  HTTP 消息压缩</h4><p>在使用HTTP协议的时候，使用压缩技术尽可能的减少传输数据的大小通常意义上是明智的选择。当然压缩或者解压会消耗CPU资源。大多数的时候这个是个的选择，尤其是传送文本数据的时候。<br>Netty提供实现压缩和解压缩的ChannelHandler，支持”gzip”和”deflate”的格式编码.</p>
+<blockquote>
+<p><em>Http 请求头</em><br>客户端可以在HTTP头里发送客户端支持的加密方式，如下所示.<br>但是服务器不一定按照要求强制压缩数据后发送。</p>
+<p>GET /encrypted-area HTTP/1.1<br>Host: www.example.com<br>Accept-Encoding: gzip, deflate</p>
+</blockquote>
+<h5 id="源码_8-5_自动压缩HTTP_消息">源码 8.5 自动压缩HTTP 消息</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HttpAggregatorInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> isClient;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">HttpAggregatorInitializer</span><span class="params">(<span class="keyword">boolean</span> isClient)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.isClient = isClient;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        <span class="keyword">if</span> (isClient) &#123;</span><br><span class="line">            <span class="comment">//添加客户端HttpClientCodec</span></span><br><span class="line">            pipeline.addLast(<span class="string">"codec"</span>, <span class="keyword">new</span> HttpClientCodec());</span><br><span class="line">            <span class="comment">//添加HttpContentDecompressor支持http响应解压缩</span></span><br><span class="line">            pipeline.addLast(<span class="string">"decompressor"</span>, <span class="keyword">new</span> HttpContentDecompressor());</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">//添加服务端HttpServerCodec</span></span><br><span class="line">            pipeline.addLast(<span class="string">"codec"</span>, <span class="keyword">new</span> HttpServerCodec());</span><br><span class="line">            <span class="comment">//添加服务端压缩HttpContentCompressor，如果客户端支持的话</span></span><br><span class="line">            pipeline.addLast(<span class="string">"compressor"</span>, <span class="keyword">new</span> HttpContentCompressor());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>压缩的依赖类库<br>请注意如果你是使用Java 6 或者以前的版本，支持压缩功能，你还需要把jzlib18类库防止你的类路径中。<br> The Maven 依赖关系:</p>
+</blockquote>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="title">groupId</span>&gt;</span>com.jcraft<span class="tag">&lt;/<span class="title">groupId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="title">artifactId</span>&gt;</span>jzlib<span class="tag">&lt;/<span class="title">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="title">version</span>&gt;</span>1.1.3<span class="tag">&lt;/<span class="title">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="title">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h4 id="8-2-4_使用_HTTPS">8.2.4  使用 HTTPS</h4><p>源码 8.6 显示了支持HTTPS仅需要添加一个SslHandler就可以了。</p>
+<h5 id="8-6_HTTPS协议支持例子">8.6 HTTPS协议支持例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HttpsCodecInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> SSLContext context;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> isClient;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">HttpsCodecInitializer</span><span class="params">(SSLContext context, <span class="keyword">boolean</span> isClient)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.context = context;</span><br><span class="line">        <span class="keyword">this</span>.isClient = isClient;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        SSLEngine engine = context.createSSLEngine();</span><br><span class="line">        engine.setUseClientMode(isClient);</span><br><span class="line">        <span class="comment">//添加SslHandler到ChannelPipeline中支持HTTPS</span></span><br><span class="line">        pipeline.addFirst(<span class="string">"ssl"</span>, <span class="keyword">new</span> SslHandler(engine));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (isClient) &#123;</span><br><span class="line">            <span class="comment">//添加客户端支持codec</span></span><br><span class="line">            pipeline.addLast(<span class="string">"codec"</span>, <span class="keyword">new</span> HttpClientCodec());</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">//添加服务端支持Codec</span></span><br><span class="line">            pipeline.addLast(<span class="string">"codec"</span>, <span class="keyword">new</span> HttpServerCodec()); <span class="comment">//3</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述的例子很好的展示了Netty的架构方式，很好的利用可重用组件. 我们可以简单的添加一个ChannelHandler到ChannelPipeline中就可以给应用添加一个加密协议的支持.</p>
+<h4 id="8-2-5_WebSocket_支持">8.2.5  WebSocket 支持</h4><p>Netty 提供大量的工具支持基于HTTP应用的高级特性。 在这个小节里，我们会讨论一下WebSocket协议。 它在2011年被IETF（Internet Engineering Task Force）标准化. WebSocket协议解决了一个长期存在的问题：当底层HTTP协议需要支持一系列的Http请求和响应交互、关联的时候，如何实时有效发布信息。AjAX技术已经提供了一些改进。但是数据驱动仍然是在客户端发起请求。 业界已经有些解决方案可以解决部分问题，但是这些都是一些<a href="https://en.wikipedia.org/wiki/Comet_%28programming%29" target="_blank" rel="external">变通的方式</a>，但都有些局限性。这里就不详细展开.</p>
+<p>WebSocket 规范和实现展示了一个更加有效的解决方案，简单说WebSocket提供了：</p>
+<blockquote>
+<p>a  single  TCP  connection  for  traffic  in  both  directions.  […] Combined  with  the WebSocket  API  […],  it  provides  an  alternative  to  HTTP  polling  for  two-way communication from a web page to a remote server.<br>上面是<a href="http://tools.ietf.org/html/rfc6455" target="_blank" rel="external">ITTF的WebSocket</a>规范上阐述。翻译后就是，单一的HTTP连接就可以处理双向的交互。注：HTTP协议只支持单向通信，客户端发起请求到服务端，服务端提供响应。而服务端无法主动发起请求给客户端。而WebSocket提供了以前的解决方案(如AJAX)使用拉的技术(HTTP polling)来做双向通讯提供了另一种选择。</p>
+</blockquote>
+<p>这就是WebSocket协议，它提供客户端和服务器端双向的交换信息。我们不会详细的介绍协议的细节，但需要一提就是早期的WebSocket的实现都是局限交换文本数据，但现在WebSocket可以交换任意类型的数据，更像一个通常意义上的Socket。</p>
+<p>图8.4 给出了一个通用的WebSocket协议图, 以HTTP协议开始通信，然后升级到双向的WebSocket.</p>
+<p><img src="/img/84websocket.png" alt="websocket通信图"></p>
+<ol>
+<li>客户端使用(HTTP)和服务器通信</li>
+<li>服务器响应(HTTP)与客户端通信</li>
+<li>客户端通过HTTP(S)协议发起WebSocket握手请求 HTTP(s) 等待响应</li>
+<li>连接被升级WebSocket</li>
+</ol>
+<p>同理给你的应用添加WebSocket支持，也仅需给客户端和服务端添加合适的ChannelHandler. 这个类会处理WebSocket协议指定的消息类型，在WebSocket中顶一个为”frames”. 如表8.3所示，可以被分为数据和控制”frames” .</p>
+<h5 id="表8-3_WebSocket_Frames_类型">表8.3 WebSocket Frames 类型</h5><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>类型</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BinaryWebSocketFrame</td>
+<td>Data frame</td>
+<td>二进制数据</td>
+</tr>
+<tr>
+<td>TextWebSocketFrame</td>
+<td>Data frame</td>
+<td>文本数据</td>
+</tr>
+<tr>
+<td>ContinuationWebSocketFrame</td>
+<td>Data frame</td>
+<td>文本或者二进制数据，归属于前个Frame是</td>
+</tr>
+</tbody>
+</table>
+<p>BinaryWebSocketFrame 还是 TextWebSocketFrame|<br>|CloseWebSocketFrame | Control frame | 一个CLOSE关闭请求， 关闭状态码和一个短语|<br>|PingWebSocketFrame | Control frame| 请求发送 PongWebSocketFrame|<br>|PongWebSocketFrame | Control frame| 发送响应 PingWebSocketFrame|</p>
+<p>由于Netty主要作为服务器端使用, 我们将会专注在服务端的例子。 源码8.7 展示了一个使用WebSocketServerProtocolHandler创建WebSocket服务端例子。这个类从HTTP协议升级到WebSocket协议，自动添加了三个控制Frames，CLOSE,PING,DONG. 文本和二进制数据会被传递到下一个ChannelHandler处理，自己实现处理逻辑.</p>
+<h5 id="源码_8-7_服务器端支持WebSocket">源码 8.7 服务器端支持WebSocket</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WebSocketServerInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt;</span>&#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ch.pipeline().addLast(</span><br><span class="line">            <span class="keyword">new</span> HttpServerCodec(),</span><br><span class="line">            <span class="comment">//提供汇聚后的完整HTTP请求</span></span><br><span class="line">            <span class="keyword">new</span> HttpObjectAggregator(<span class="number">65536</span>),</span><br><span class="line">            <span class="comment">// 添加WebSocket协议支持，如果请求发送到/websocket下</span></span><br><span class="line">            <span class="keyword">new</span> WebSocketServerProtocolHandler(<span class="string">"/websocket"</span>),</span><br><span class="line">            <span class="comment">//添加文本帧支持</span></span><br><span class="line">            <span class="keyword">new</span> TextFrameHandler(),</span><br><span class="line">            <span class="comment">//添加二进制帧支持</span></span><br><span class="line">            <span class="keyword">new</span> BinaryFrameHandler(),</span><br><span class="line">            <span class="comment">//添加ContinuationFrame支持</span></span><br><span class="line">            <span class="keyword">new</span> ContinuationFrameHandler());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">TextFrameHandler</span> <span class="keyword">extends</span></span><br><span class="line">       <span class="title">SimpleChannelInboundHandler</span>&lt;<span class="title">TextWebSocketFrame</span>&gt; </span>&#123;</span><br><span class="line">            <span class="annotation">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext ctx,</span><br><span class="line">                TextWebSocketFrame msg)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                <span class="comment">// Handle text frame</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">BinaryFrameHandler</span> <span class="keyword">extends</span></span><br><span class="line">        <span class="title">SimpleChannelInboundHandler</span>&lt;<span class="title">BinaryWebSocketFrame</span>&gt; </span>&#123;</span><br><span class="line">            <span class="annotation">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext ctx,</span><br><span class="line">                BinaryWebSocketFrame msg)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                <span class="comment">// Handle binary frame</span></span><br><span class="line">            &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ContinuationFrameHandler</span> <span class="keyword">extends</span></span><br><span class="line">        <span class="title">SimpleChannelInboundHandler</span>&lt;<span class="title">ContinuationWebSocketFrame</span>&gt; </span>&#123;</span><br><span class="line">            <span class="annotation">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext ctx,</span><br><span class="line">                ContinuationWebSocketFrame msg)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                <span class="comment">// Handle continuation frame</span></span><br><span class="line">            &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>安全的WebSocket通信<br>简单的添加SslHandler就可以为webSocket提供安全通信协议SSL支持.</p>
+</blockquote>
+<p>更多的WebSocket的例子可以参考第11章，会有一个详细设计的实时的WebSocket应用。</p>
+<h4 id="8-2-6_SPDY">8.2.6  SPDY</h4><p>SPDY22 (SPeeDY) 是在Web里最新发展的一种技术. 由Google开发, 由IETF开发最新HTTP 2.0 也是基于它来开发的。SPDY的主要目标是减少Web页面的转载时间和提升Web安全。这些是通过如下技实现：</p>
+<ul>
+<li>压缩头</li>
+<li>加密任何消息</li>
+<li>复用连接</li>
+<li>支持不同的传输优先级</li>
+</ul>
+<p>SPDY已经有多个版本了，到今天已经有5个版本：</p>
+<ul>
+<li><ol>
+<li>初始化版本，已经不在使用</li>
+</ol>
+</li>
+<li><ol>
+<li>添加新特性包括服务器推送(server-push)</li>
+</ol>
+</li>
+<li><ol>
+<li>新的特性包括流控制和增强的压缩(flow control,updated compression)</li>
+</ol>
+</li>
+<li>3.1. 会话层的流控制(Session-layer flow control)</li>
+<li>4.0 流媒体的流控制以及更多的HTTP2.0整合</li>
+</ul>
+<p>当前SPDY协议已经被不少浏览器支持包括Google Chrome, Firefox,Opera等。<br>Netty 支持 SPDY 版本2和版本3包括3.1. 这些协议是目前主要被使用的，如何使用SPDY参考第12章。</p>
+<h3 id="8-3_空闲连接和超时处理">8.3  空闲连接和超时处理</h3><p>我们已经讨论了如何使用Netty提供的Codec和ChannelHandler方便的处理HTTP协议，使得开发Web应用更加有效、可重用、安全。然而如果我们不能管理好我们实际网络资源，那么这些设计良好的工具也会不能更好的服务我们。所以是时候来讨论一下连接管理了。检测空闲连接和超时可以有效的以定时方式清除资源。一个比较通用的测试空闲连接方式是对远端发送一个”心跳”消息确定连接是否还在激活状态。比较激进的做法是在一段指定不活跃的时间后直接关闭连接。</p>
+<p>处理空闲连接是一个比较常见的网络任务，Netty为它提供好几个ChannelHandler实现。列表8.4提供一个概览。</p>
+<h4 id="列表8-4_处理空闲连接和超时的ChannelHandlers">列表8.4 处理空闲连接和超时的ChannelHandlers</h4><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IdleStateHandler</td>
+<td>当连接空闲超出指定时间，触发IdleStateEvent事件。你可以在下一个ChannelHandler中重载userEventTriggered方法，捕获这个事件</td>
+</tr>
+<tr>
+<td>ReadTimeoutHandler</td>
+<td>当在指定的时间间隔内没有接受到入站数据，则抛出ReadTimeoutException异常，并且关闭Channel. ReadTimeoutException异常可以通过重载ChannelHandler的exceptionCaught方法捕获</td>
+</tr>
+<tr>
+<td>WriteTimeoutHandler</td>
+<td>当在一个指定的时间间隔内，出站动作没有写入数据，则抛出一个WriteTimeoutException，并且关闭Channel. WriteTimeoutException异常可通过重载ChannelHandler的exceptionCaught方法捕获.</td>
+</tr>
+</tbody>
+</table>
+<p>我们来看一下最普遍使用的处理器IdleStateHandler. 源码8.8 展示了可以在60秒内没有收到数据和发送数据的时候得到通知. 在这种情况下一个心跳信息被发送到远端来测试连接的可用性，如果没有响应则这个连接已经被关闭。如果响应是失败则关闭连接(CLOSE_ON_FAILURE)，释放资源。</p>
+<h4 id="源码8-8_发送心跳信息">源码8.8 发送心跳信息</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IdleStateHandlerInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        <span class="comment">//添加IdelStateHandler，60秒内没有收到或者写入数据则触发IdleStateEvent</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> IdleStateHandler(<span class="number">0</span>, <span class="number">0</span>, <span class="number">60</span>, TimeUnit.SECONDS));</span><br><span class="line">        <span class="comment">//捕获 IdleStateEvent 发送心跳信息</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> HeartbeatHandler());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">HeartbeatHandler</span> <span class="keyword">extends</span> <span class="title">ChannelStateHandlerAdapter</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> ByteBuf HEARTBEAT_SEQUENCE = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(<span class="string">"HEARTBEAT"</span>, CharsetUtil.ISO_8859_1)); <span class="comment">//构造心跳信息</span></span><br><span class="line"></span><br><span class="line">        <span class="annotation">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">userEventTriggered</span><span class="params">(ChannelHandlerContext ctx, Object evt)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (evt <span class="keyword">instanceof</span> IdleStateEvent) &#123;</span><br><span class="line">                <span class="comment">//发送心跳信息，并且添加监听器，如果失败时候关闭连接</span></span><br><span class="line">                ctx.writeAndFlush(HEARTBEAT_SEQUENCE.duplicate()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">super</span>.userEventTriggered(ctx, evt); <span class="comment">//4</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="源码_8-9_ReadTimeOutHandler_例子">源码 8.9 ReadTimeOutHandler 例子</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 30s内没有收到入站数据则关闭连接</span></span><br><span class="line">  <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyChannelInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel channel)</span> </span>&#123;</span><br><span class="line">          channel.pipeline().addLast(<span class="string">"readTimeoutHandler"</span>, <span class="keyword">new</span> ReadTimeoutHandler(<span class="number">30</span>));</span><br><span class="line">          channel.pipeline().addLast(<span class="string">"myHandler"</span>, <span class="keyword">new</span> MyHandler());</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 处理超时异常.</span></span><br><span class="line">  <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyHandler</span> <span class="keyword">extends</span> <span class="title">ChannelDuplexHandler</span> </span>&#123;</span><br><span class="line">       <span class="annotation">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">exceptionCaught</span><span class="params">(ChannelHandlerContext ctx, Throwable cause)</span></span><br><span class="line">              <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">          <span class="keyword">if</span> (cause <span class="keyword">instanceof</span> ReadTimeoutException) &#123;</span><br><span class="line">              <span class="comment">// do something</span></span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">              <span class="keyword">super</span>.exceptionCaught(ctx, cause);</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  ServerBootstrap bootstrap =...;</span><br><span class="line">  bootstrap.childHandler(<span class="keyword">new</span> MyChannelInitializer());</span><br></pre></td></tr></table></figure>
+<h4 id="列表8-5_处理空闲连接和超时的ChannelHandlers">列表8.5 处理空闲连接和超时的ChannelHandlers</h4><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IdleStateHandler</td>
+<td>当连接空闲超出指定时间，触发IdleStateEvent事件。你可以在下一个ChannelHandler中重载userEventTriggered方法，捕获这个事件</td>
+</tr>
+<tr>
+<td>ReadTimeoutHandler</td>
+<td>当在指定的时间间隔内没有接受到入站数据，则抛出ReadTimeoutException异常，并且关闭Channel. ReadTimeoutException异常可以通过重载ChannelHandler的exceptionCaught方法捕获</td>
+</tr>
+<tr>
+<td>WriteTimeoutHandler</td>
+<td>当在一个指定的时间间隔内，出站动作没有写入数据，则抛出一个WriteTimeoutException，并且关闭Channel. WriteTimeoutException异常可通过重载ChannelHandler的exceptionCaught方法捕获.</td>
+</tr>
+</tbody>
+</table>
+<p>我们来看一下最普遍使用的处理器IdleStateHandler. 源码8.8 展示了可以在60秒内没有收到数据和发送数据的时候得到通知. 在这种情况下一个心跳信息被发送到远端来测试连接的可用性，如果没有响应则这个连接已经被关闭。如果响应是失败则关闭连接(CLOSE_ON_FAILURE)，释放资源。</p>
+<h4 id="源码8-8_发送心跳信息-1">源码8.8 发送心跳信息</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IdleStateHandlerInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        <span class="comment">//添加IdelStateHandler，60秒内没有收到或者写入数据则触发IdleStateEvent</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> IdleStateHandler(<span class="number">0</span>, <span class="number">0</span>, <span class="number">60</span>, TimeUnit.SECONDS));</span><br><span class="line">        <span class="comment">//捕获 IdleStateEvent 发送心跳信息</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> HeartbeatHandler());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">HeartbeatHandler</span> <span class="keyword">extends</span> <span class="title">ChannelStateHandlerAdapter</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> ByteBuf HEARTBEAT_SEQUENCE = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(<span class="string">"HEARTBEAT"</span>, CharsetUtil.ISO_8859_1)); <span class="comment">//构造心跳信息</span></span><br><span class="line"></span><br><span class="line">        <span class="annotation">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">userEventTriggered</span><span class="params">(ChannelHandlerContext ctx, Object evt)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (evt <span class="keyword">instanceof</span> IdleStateEvent) &#123;</span><br><span class="line">                <span class="comment">//发送心跳信息，并且添加监听器，如果失败时候关闭连接</span></span><br><span class="line">                ctx.writeAndFlush(HEARTBEAT_SEQUENCE.duplicate()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">super</span>.userEventTriggered(ctx, evt); <span class="comment">//4</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="源码_8-9_ReadTimeOutHandler_例子-1">源码 8.9 ReadTimeOutHandler 例子</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 30s内没有收到入站数据则关闭连接</span></span><br><span class="line">  <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyChannelInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel channel)</span> </span>&#123;</span><br><span class="line">          channel.pipeline().addLast(<span class="string">"readTimeoutHandler"</span>, <span class="keyword">new</span> ReadTimeoutHandler(<span class="number">30</span>));</span><br><span class="line">          channel.pipeline().addLast(<span class="string">"myHandler"</span>, <span class="keyword">new</span> MyHandler());</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 处理超时异常.</span></span><br><span class="line">  <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyHandler</span> <span class="keyword">extends</span> <span class="title">ChannelDuplexHandler</span> </span>&#123;</span><br><span class="line">       <span class="annotation">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">exceptionCaught</span><span class="params">(ChannelHandlerContext ctx, Throwable cause)</span></span><br><span class="line">              <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">          <span class="keyword">if</span> (cause <span class="keyword">instanceof</span> ReadTimeoutException) &#123;</span><br><span class="line">              <span class="comment">// do something</span></span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">              <span class="keyword">super</span>.exceptionCaught(ctx, cause);</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  ServerBootstrap bootstrap =...;</span><br><span class="line">  bootstrap.childHandler(<span class="keyword">new</span> MyChannelInitializer());</span><br></pre></td></tr></table></figure>
+<h3 id="8-4_解码基于分隔符和长度的协议">8.4  解码基于分隔符和长度的协议</h3><p>当你在使用Netty开发应用的时候，如果你遇到需要解码基于分隔符或者长度的协议。本小节讨论了如何使用ChannelHandler来处理这种情况。</p>
+<h4 id="8-4-1_基于分隔符的协议">8.4.1  基于分隔符的协议</h4><p>RFC定义的这些协议中如 <a href="http://www.ietf.org/rfc/rfc2821.txt" target="_blank" rel="external">SMTP23</a>, <a href="http://www.ietf.org/rfc/rfc1939.txt" target="_blank" rel="external">POP3</a>, <a href="http://tools.ietf.org/html/rfc3501" target="_blank" rel="external">IMAP</a>, <a href="http://tools.ietf.org/search/rfc854" target="_blank" rel="external">Telnet</a>等通常是基于分隔符或者扩展分隔符的。表8.6罗列了Netty的解码器可以轻易的抽取被任意符号分割的帧。</p>
+<h5 id="列表8-6_分隔符解码器">列表8.6 分隔符解码器</h5><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DelimiterBasedFrameDecoder</td>
+<td>一个使用指定分隔符抽取帧的解码器</td>
+</tr>
+<tr>
+<td>LineBasedFrameDecoder</td>
+<td>一个基于行(以”\n”或者”\r\n”字符结束的行)抽取帧的解码器，通常比DelimiterBasedFrameDecoder快</td>
+</tr>
+</tbody>
+</table>
+<p>图 8.5 显示了基于行(“\r\n”)帧是如何被处理的.</p>
+<h5 id="图_8-5_处理基于行的帧">图 8.5 处理基于行的帧</h5><p><img src="/img/85linebasehandler.png" alt="基于行的处理流程"></p>
+<h5 id="源码_8-10_处理基于行的帧例子">源码 8.10 处理基于行的帧例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LineBasedHandlerInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        <span class="comment">//添加LineBasedFrameDecoder,最大长度为65 * 1024,把结果传递个FrameHandler</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> LineBasedFrameDecoder(<span class="number">65</span> * <span class="number">1024</span>));</span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> FrameHandler()); <span class="comment">//添加行数据处理器</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">FrameHandler</span> <span class="keyword">extends</span> <span class="title">SimpleChannelInboundHandler</span>&lt;<span class="title">ByteBuf</span>&gt; </span>&#123;</span><br><span class="line">        <span class="annotation">@Override</span>  <span class="comment">//每个帧都被传递到这里处理</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext ctx, ByteBuf msg)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="comment">// 处理动作...</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h5 id="源码_8-11_基于行处理例子2">源码 8.11 基于行处理例子2</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//如果Strip=true,则最后一行必须加上\n，否则会被忽略，如注释代码所示</span></span><br><span class="line"><span class="annotation">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testDecodeWithStrip</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    EmbeddedChannel ch = <span class="keyword">new</span> EmbeddedChannel(<span class="keyword">new</span> LineBasedFrameDecoder(<span class="number">8192</span>,<span class="keyword">true</span>, <span class="keyword">false</span>));</span><br><span class="line"></span><br><span class="line">    ch.writeInbound(copiedBuffer(<span class="string">"first\r\nsecond\nthird\n"</span>, CharsetUtil.US_ASCII));</span><br><span class="line">    <span class="comment">//ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));</span></span><br><span class="line">    assertEquals(<span class="string">"first"</span>, releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));</span><br><span class="line">    assertEquals(<span class="string">"second"</span>, releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));</span><br><span class="line">    assertEquals(<span class="string">"third"</span>, releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));</span><br><span class="line">    <span class="comment">//assertNull(ch.readInbound());</span></span><br><span class="line">    ch.finish();</span><br><span class="line"></span><br><span class="line">    ReferenceCountUtil.release(ch.readInbound());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果需要抽取数据是使用其他字符分割的，这个时候可以使用DelimiterBasedFrameDecoder,使用方式是类似的，仅需在构造DelimiterBasedFrameDecoder时候传入指定分隔符。<br>这个解码器是实现你自己定制分隔符的协议,如下是个自定义分割符的协议的处理例子：</p>
+<ul>
+<li>入站数据流是一系列由行分割符(“\n”)分割的数据帧.</li>
+<li>每个帧都是由一些列的项目组成，每个项目是根据空格符号分割的.</li>
+<li>每个帧的实际代表数据是一个命令行的格式,一个命令跟随着一系列的属性</li>
+</ul>
+<p>实现的方式源码8.12所示：</p>
+<ul>
+<li>class Cmd –存放入站数据(CMD)的帧在一个ByteBuf中，包含名字和其他属性。</li>
+<li>class CmdDecoder – 重载decode()收到一个行的数据,并且解析到Cmd中</li>
+<li>class CmdHandler– 从CmdDecoder中收到解码后的Cmd对象，执行该命令</li>
+</ul>
+<h5 id="源码8-12_自定义分割符例子">源码8.12 自定义分割符例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CmdHandlerInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        <span class="comment">//添加CmdDecoder到这个Pipeline，处理后数据传递到CmdHandler</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> CmdDecoder(<span class="number">65</span> * <span class="number">1024</span>));</span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> CmdHandler());</span><br><span class="line">    &#125;</span><br><span class="line"><span class="comment">//代表命令行的POJO</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Cmd</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> ByteBuf name;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> ByteBuf args;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">Cmd</span><span class="params">(ByteBuf name, ByteBuf args)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.name = name;</span><br><span class="line">            <span class="keyword">this</span>.args = args;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> ByteBuf <span class="title">name</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> name;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> ByteBuf <span class="title">args</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> args;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"><span class="comment">//基于行分割的CmdDecoder</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">CmdDecoder</span> <span class="keyword">extends</span> <span class="title">LineBasedFrameDecoder</span> </span>&#123;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">CmdDecoder</span><span class="params">(<span class="keyword">int</span> maxLength)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">super</span>(maxLength);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="annotation">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">protected</span> Object <span class="title">decode</span><span class="params">(ChannelHandlerContext ctx, ByteBuf buffer)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="comment">//基于行分割</span></span><br><span class="line">            ByteBuf frame =  (ByteBuf) <span class="keyword">super</span>.decode(ctx, buffer);</span><br><span class="line">            <span class="keyword">if</span> (frame == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">int</span> index = frame.indexOf(frame.readerIndex(), frame.writerIndex(), (<span class="keyword">byte</span>) <span class="string">' '</span>);</span><br><span class="line">            <span class="comment">//构造Cmd对象</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> Cmd(frame.slice(frame.readerIndex(), index), frame.slice(index +<span class="number">1</span>, frame.writerIndex()));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">CmdHandler</span> <span class="keyword">extends</span> <span class="title">SimpleChannelInboundHandler</span>&lt;<span class="title">Cmd</span>&gt; </span>&#123;</span><br><span class="line">        <span class="annotation">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext ctx, Cmd msg)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="comment">//处理Cmd数据</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="8-4-2_基于长度的协议">8.4.2  基于长度的协议</h4><p>基于长度的协议定义了个一个帧，帧头上编入它的长度，而不是像分隔符一样以指定的字符结尾。<br>表8.7罗列了Netty提供了两种解码器.</p>
+<h5 id="列表8-7_长度解码器">列表8.7 长度解码器</h5><p>|<em>名字</em>| <em>描述</em>|<br>| FixedLengthFrameDecoder|根据固定长度抽取帧，在类构造器中传入长度.|<br>| LengthFieldBasedFrameDecoder| 抽取帧，它的长度是编码在帧头中的。offset和长度需要在类构造器中指定.|</p>
+<p>图 8.6 显示了一个FixedLengthFrameDecoder操作，指定帧的长度为8.</p>
+<h5 id="图_8-6_FixedLengthFrameDecoder操作">图 8.6 FixedLengthFrameDecoder操作</h5><p><img src="/img/86fixedlendecoder.png" alt="FixedLengthFrameDecoder操作示意图"></p>
+<p>帧长度被编码到帧数据中的场景会更加常见.这个时候你可以使用 LengthFieldBasedFrameDecoder.它会根据帧头中指定字段中抽取长度值，然后根据长度从数据流中抽取帧。<br>图8.7 显示了个长度是编码在头2个字节的例子，其中offset=0，长度是2个字节.</p>
+<h5 id="图_8-7_LengthFieldBasedFrameDecoder操作">图 8.7 LengthFieldBasedFrameDecoder操作</h5><p><img src="/img/87lenfielddecoder.png" alt="LengthFieldBasedFrameDecoder操作示意图"></p>
+<p>1.开始两个字节表示帧的长度为12<br>2.实际内容<br>3.抽取后的帧数据</p>
+<p>LengthFieldBasedFrameDecoder 提供好几个构造器，支持大量的帧的头字段配置场景。源码 8.13 显示的构造器有3个入参(maxFrameLength, lengthFieldOffset and lengthFieldLength). 这个例子里长度被编码在帧的头8个字节里.</p>
+<h5 id="源码_8-13_LengthFieldBasedFrameDecoder例子">源码 8.13 LengthFieldBasedFrameDecoder例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LengthBasedInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        <span class="comment">// 添加LengthFieldBasedFrameDecoder，前8个字节中编码了长度</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> LengthFieldBasedFrameDecoder(<span class="number">65</span> * <span class="number">1024</span>, <span class="number">0</span>, <span class="number">8</span>));</span><br><span class="line">        <span class="comment">//数据帧处理器</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> FrameHandler());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">FrameHandler</span> <span class="keyword">extends</span> <span class="title">SimpleChannelInboundHandler</span>&lt;<span class="title">ByteBuf</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext ctx, ByteBuf msg)</span> <span class="keyword">throws</span>      Exception </span>&#123;</span><br><span class="line">     <span class="comment">// Do something with the frame //3</span></span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="8-5_写入大量数据">8.5  写入大量数据</h3><p>在异步的框架中高效写入大量的数据是一个特殊的问题，因为写入动作是非阻塞的，写入动作立即返回了，有可能数据还没有被写入到远端，仅仅通知一下ChannelFuture它失败了。这个时候你必须停止写入，或者冒着内存溢出的风险(资源还没释放).所以当在一个很慢的网络中写入大量的数据到远端时候，我们需要注意释放内存也会变得缓慢。如我们需要往网络中写入个文件的时候。在第4章中我们讨论传输(transport)的时候，我们提到了NIO的“”zero-copy”技术，它在把文件写入到网络的过程中可以消除内核和用户进程拷贝的步骤.所有的这些都在Netty的内部完成，这个需要应用级别的代码实现FileRegion接口。一个文件的区域(regin)通过Channel发送就可以支持”zero-copy”的特性.</p>
+<p>源码 8.14 展示了如何通过从FileInputStream中创建一个DefaultFileRegion来使用”zero-copy”技术传输文件内容，写入到Channel中.</p>
+<h4 id="源码_8-14_文件_zero-copy传输例子">源码 8.14 文件 zero-copy传输例子</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//获取一个FileInputStream实例</span></span><br><span class="line">FileInputStream in = <span class="keyword">new</span> FileInputStream(file);</span><br><span class="line"><span class="comment">//为整个文件创建一个fileregion</span></span><br><span class="line">FileRegion region = <span class="keyword">new</span> DefaultFileRegion(in.getChannel(), <span class="number">0</span>, file.length());</span><br><span class="line"></span><br><span class="line"><span class="comment">//写入FileRegion,注册ChannelFutureListener</span></span><br><span class="line">channel.writeAndFlush(region).addListener(<span class="keyword">new</span> ChannelFutureListener() &#123; <span class="comment">//3</span></span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">operationComplete</span><span class="params">(ChannelFuture future)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!future.isSuccess()) &#123;</span><br><span class="line">            <span class="comment">//处理失败场景</span></span><br><span class="line">            Throwable cause = future.cause();</span><br><span class="line">            <span class="comment">//...</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>在上面的例子中看到仅仅直接传送了整个文件的内容，应用没有处理文件的内容。在有些场景中，数据必须被处理，那么就需要把数据从文件系统拷贝到用户内存中。这个时候你可以使用ChunkedWriteHandlerl来写入数据，这个类支持吸入大量的数据而不会引起大量内存的消耗.<br>关键的接口是ChunkInput,在列表8.7中列出的每个实现都是表示了没有定义长度的数据流。它将会被ChunkedWriteHandler处理.</p>
+<h4 id="列表_8-8_ChunkInput的实现类">列表 8.8 ChunkInput的实现类</h4><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ChunkedFile</td>
+<td>从文件中一块一块的获取数据，通常在操作系统不支持zero-copy的时候使用，或者你需要传输文件</td>
+</tr>
+<tr>
+<td>ChunkedNioFile</td>
+<td>和ChunkedFile类似，但是它是使用了NIOFileChannel</td>
+</tr>
+<tr>
+<td>ChunkedStream</td>
+<td>从InputStream中一块一块的传输内容</td>
+</tr>
+<tr>
+<td>ChunkedNioStream</td>
+<td>从ReadableByteChannel中一块一块的传输内容</td>
+</tr>
+</tbody>
+</table>
+<p>源码 8.15 展示了使用ChunkedStream的例子，该类使用 File实例化.在Channel激活时候一块块写入文件数据</p>
+<h4 id="源码_8-15_使用File传输文件内容例子">源码 8.15 使用File传输文件内容例子</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ChunkedWriteHandlerInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> File file;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ChunkedWriteHandlerInitializer</span><span class="params">(File file)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.file = file;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        <span class="comment">//添加ChunkedWriteHandler</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> ChunkedWriteHandler());</span><br><span class="line">        <span class="comment">//添加WriteStreamHandler，当Channel激活时候, 写入文件内容</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> WriteStreamHandler());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">WriteStreamHandler</span>  <span class="keyword">extends</span> <span class="title">ChannelInboundHandlerAdapter</span> </span>&#123;</span><br><span class="line">        <span class="annotation">@Override</span> <span class="comment">//Channel激活的时候写入文件到Channel中</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelActive</span><span class="params">(ChannelHandlerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="keyword">super</span>.channelActive(ctx);</span><br><span class="line">            ctx.writeAndFlush(<span class="keyword">new</span> ChunkedStream(<span class="keyword">new</span> FileInputStream(file)));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>ChunkedInput<br>所有需要按照一块块写入大量数据的请提供实现ChunkedInput的类即可</p>
+</blockquote>
+<p>在本小节里我们讨论了如何使用zero-copy技术高效传输文件，使用ChunkWriteHandler写入大量数据而无需考虑内存溢出场景.<br>下个章节中我们将讨论Netty 序列化问题.</p>
+<h3 id="8-6_序列化数据">8.6  序列化数据</h3><p>JDK 为提供在网络上传输对象提供了ObjectOutputStream和ObjectInputStream，它可以序列化和反序列化原始数据类型和POJO。 这个API很简单，它可以支持所有实现java.io.Serializable接口的对象. 它也不是高性能，在本小节里我们看下Netty提供了什么？</p>
+<h4 id="8-6-1_JDK_序列化">8.6.1  JDK 序列化</h4><p>如果你的应用之间的交互使用 ObjectOutputStream和 ObjectInputStream，并且兼容性是你主要考量点，那么JDK的序列化是你的好选择.列表 8.8 列出了Netty提供和JDK兼容操作的序列化类.</p>
+<h5 id="列表8-9_Netty_JDK序列化兼容类">列表8.9 Netty JDK序列化兼容类</h5><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CompatibleObjectDecoder</td>
+<td>当与使用JDK序列化的非Netty端交互的解码器</td>
+</tr>
+<tr>
+<td>CompatibleObjectEncoder</td>
+<td>当与使用JDK序列化的非Netty端交互的编码器</td>
+</tr>
+<tr>
+<td>ObjectDecoder</td>
+<td>当与使用在JDK序列化基础上的客户化的序列化的时候使用的解码器。当外部依赖被排除的时候提供一个速度的提升,否则请使用其他序列化</td>
+</tr>
+<tr>
+<td>ObjectEncoder</td>
+<td>当与使用在JDK序列化基础上的客户化的序列化的时候使用的编码器。当外部依赖被排除的时候提供一个速度的提升,否则请使用其他序列化</td>
+</tr>
+</tbody>
+</table>
+<h4 id="8-6-2_使用_JBoss_Marshalling_序列化">8.6.2  使用 JBoss Marshalling 序列化</h4><p>如果你不限制使用外部依赖的类的话，<a href="http://jbossmarshalling.jboss.org/" target="_blank" rel="external">JBoss Marshanlling</a>是一个选择，它比JDK 序列化快3倍,而且更加紧凑. JBoss Marshalling 是序列化API的另一种选择，它不仅修复了JDK序列化的一些问题，而且和JDK java.io.Serializable 完全兼容,它还提供了好几个调优选项和额外的特性.所有的这些都可以通过工厂模式插入这些特性. (如externalizers, class/instance lookup tables, class resolution, and object replacement等).<br>Netty为JBoss Marshalling 提供两种类型编码和解码器,如列表 8.9所示,第一种是兼容JDK序列化,第二种使用JBoss Marshalling，性能更佳.</p>
+<h5 id="列表_8-10_JBoss_Marshalling_codecs">列表 8.10 JBoss Marshalling codecs</h5><table>
+<thead>
+<tr>
+<th><em>Name</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CompatibleMarshallingDecoder</td>
+<td>兼容JDK序列化解码器</td>
+</tr>
+<tr>
+<td>CompatibleMarshallingEncoder</td>
+<td>兼容JDK序列化编码器</td>
+</tr>
+<tr>
+<td>MarshallingDecoder</td>
+<td>使用JBoss marshalling解码器</td>
+</tr>
+<tr>
+<td>MarshallingEncoder</td>
+<td>使用JBoss marshalling编码器</td>
+</tr>
+</tbody>
+</table>
+<p>源码 8.16 显示了如何使用 MarshallingDecoder 和 MarshallingEncoder. 同样只需在ChannelPipeline中正确配置编码器.</p>
+<h5 id="8-16_JBoss_Marshalling例子">8.16 JBoss Marshalling例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MarshallingInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> MarshallerProvider marshallerProvider;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> UnmarshallerProvider unmarshallerProvider;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MarshallingInitializer</span><span class="params">(UnmarshallerProvider unmarshallerProvider,  MarshallerProvider marshallerProvider)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.marshallerProvider = marshallerProvider;</span><br><span class="line">        <span class="keyword">this</span>.unmarshallerProvider = unmarshallerProvider;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel channel)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = channel.pipeline();</span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> MarshallingDecoder(unmarshallerProvider));</span><br><span class="line"></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> ObjectHandler());</span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> MarshallingEncoder(marshallerProvider));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ObjectHandler</span> <span class="keyword">extends</span> <span class="title">SimpleChannelInboundHandler</span>&lt;<span class="title">Serializable</span>&gt; </span>&#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext channelHandlerContext,  Serializable serializable)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">// Do something</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="8-6-3_ProtoBuf_序列化">8.6.3   ProtoBuf 序列化</h4><p>Netty最新的序列化方案是是用<a href="https://github.com/google/protobuf" target="_blank" rel="external">Google ProtoBuf</a>. Google开发的数据交换格式，现在github上开源. ProtoBuf对结构化的数据进行高效、紧凑的编码和解码.  几乎支持各种编程语言，所以很容易做为一个跨语言的数据交互格式. 表8.10 显示了Netty为ProtoBuf提供的ChannelHandler实现.</p>
+<h5 id="列表_8-11_ProtoBuf_Codec">列表 8.11 ProtoBuf Codec</h5><table>
+<thead>
+<tr>
+<th><em>名字</em></th>
+<th><em>描述</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ProtobufDecoder</td>
+<td>使用ProtoBuf解码消息</td>
+</tr>
+<tr>
+<td>ProtobufEncoder</td>
+<td>使用ProtoBuf编码消息</td>
+</tr>
+<tr>
+<td>ProtobufVarint32FrameDecoder</td>
+<td>根据Google Protocol Buffer的”base 128 varints” 的整数长度来动态划分收到的ByteBuf值，和LengthFieldBasedFrameDecoder有些类似</td>
+</tr>
+</tbody>
+</table>
+<p>类似使用ProtoBuf就是在ChannelPipeline中加入正确的ChannleHandler 如源码8.17所示.</p>
+<h5 id="8-17_使用ProtoBuf的例子">8.17 使用ProtoBuf的例子</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ProtoBufInitializer</span> <span class="keyword">extends</span> <span class="title">ChannelInitializer</span>&lt;<span class="title">Channel</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> MessageLite lite;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ProtoBufInitializer</span><span class="params">(MessageLite lite)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.lite = lite;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">        <span class="comment">//添加ProtobufVarint32FrameDecoder,分解帧</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> ProtobufVarint32FrameDecoder());</span><br><span class="line">        <span class="comment">//添加 ProtobufEncoder 编码器，扩展了ChannelOutboundHandler</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> ProtobufEncoder());</span><br><span class="line">        <span class="comment">//添加解码器,扩展了ChannelInboundHandler</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> ProtobufDecoder(lite));</span><br><span class="line">        <span class="comment">//添加对象处理器</span></span><br><span class="line">        pipeline.addLast(<span class="keyword">new</span> ObjectHandler());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ObjectHandler</span> <span class="keyword">extends</span> <span class="title">SimpleChannelInboundHandler</span>&lt;<span class="title">Object</span>&gt; </span>&#123;</span><br><span class="line">        <span class="annotation">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext ctx, Object msg)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="comment">// Do something with the object</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>完整的ProtoBuf的例子请参考,Netty自己提供的<a href="https://github.com/netty/netty/tree/master/example/src/main/java/io/netty/example/worldclock" target="_blank" rel="external">World Clock</a> 例子.<br>在本小节里我们讨论了Netty采用解码器和编码器支持的不同的序列化选项，它们有JDK 序列化API,JBoss Marshalling和GoogleProtoBuf.</p>
+<h3 id="8-7_总结">8.7  总结</h3><p>Netty 提供的Codecs 和 handlers可以被捆绑和扩展的，从而可以实现各种的处理场景。而且随着Netty被广泛的使用，它提供的这些组件被证明是久经考验和强健的。<br>请注意，我们只是讨论了一些通用的例子，如需更多了解Netty 提供的组件，请参阅API文档.</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/Netty/">Netty</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://iamleaf.github.io/2015/10/13/8-prebuild-handler-codec/" data-title="Netty, 第八章 内置的ChannelHandler和Codec | leaf&#39;s blog" data-tsina="null" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/10/10/4-transport/"  title="Netty, 第四章 传输--Transport">
+ <strong>下一篇：</strong><br/> 
+ <span>Netty, 第四章 传输--Transport
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/10/13/8-prebuild-handler-codec/" data-title="Netty, 第八章 内置的ChannelHandler和Codec" data-url="http://iamleaf.github.io/2015/10/13/8-prebuild-handler-codec/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="Show Sidebar"></a></div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div>
+<aside class="clearfix">
+
+  
+
+
+  
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/Netty/" title="Netty">Netty<sup>5</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">Links</p>
+    <ul>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">Weibo</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=null&verifier=&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> Hello ,This is Leaf from Oracle. <br/>
+			Java,Application Server,Concurrent programming,Networking</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1411345590" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a>  © 2015 
+		
+		<a href="/about" target="_blank" title="Leaf Ye">Leaf Ye</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"iamleaf"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3Fe6d1f421bbc9962127a50488f9ed37d1' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="Back to Top"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
