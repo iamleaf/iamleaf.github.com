@@ -67,7 +67,7 @@ Codecs
 				<h1 class="site-name"><a href="/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
 				<h2 class="blog-motto">宁静致远</h2>
 			</div>
-			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
 			</a></div>
 			<nav class="animated">
 				<ul>
@@ -83,7 +83,7 @@ Codecs
  					
 					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
 						<label>Search</label>
-						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="Search" />
 						<input type="hidden" name="q" value="site:iamleaf.github.io">
 					</form>
 					
@@ -106,14 +106,14 @@ Codecs
 		<a href="/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
 		
   <p class="article-time">
-    <time datetime="2015-10-10T09:06:08.000Z" itemprop="datePublished"> 发表于 2015-10-10</time>
+    <time datetime="2015-10-10T09:06:08.000Z" itemprop="datePublished"> Published 2015-10-10</time>
     
   </p>
 </header>
 	<div class="article-content">
 		
 		<div id="toc" class="toc-article">
-			<strong class="toc-title">文章目录</strong>
+			<strong class="toc-title">Contents</strong>
 		
 		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Netty_CodeC_框架"><span class="toc-text">Netty CodeC 框架</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1_什么是_Codec?"><span class="toc-text">7.1  什么是 Codec?</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2_Decoders–解码器"><span class="toc-text">7.2  Decoders–解码器</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#7-2-1_ByteToMessageDecoder"><span class="toc-text">7.2.1  ByteToMessageDecoder</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_7-1_ByteToMessageDecoder_API"><span class="toc-text">表 7.1 ByteToMessageDecoder API</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#ToIntegerDecoder整数解码器示意图"><span class="toc-text">ToIntegerDecoder整数解码器示意图</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_7-1_使用_ByteToMessageDecoder_that_decodes_to_Integer"><span class="toc-text">源码 7.1 使用 ByteToMessageDecoder that decodes to Integer</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Reference_Counting_in_Codecs"><span class="toc-text">Reference Counting in Codecs</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-2-2_ReplayingDecoder"><span class="toc-text">7.2.2  ReplayingDecoder</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#更多的解码器"><span class="toc-text">更多的解码器</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-2-3_MessageToMessageDecoder"><span class="toc-text">7.2.3  MessageToMessageDecoder</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_7-2_MessageToMessageDecoder_API"><span class="toc-text">表 7.2 MessageToMessageDecoder API</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_7-3_MessageToMessageDecoder_-_Integer_to_String"><span class="toc-text">源码 7.3 MessageToMessageDecoder - Integer to String</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-2-4_解码时候如何处理过长的帧(Frame)"><span class="toc-text">7.2.4  解码时候如何处理过长的帧(Frame)</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#源码_7-4_安全的ByteToMessageDecoder"><span class="toc-text">源码 7.4 安全的ByteToMessageDecoder</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3_Encoders"><span class="toc-text">7.3  Encoders</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#7-3-1_MessageToByteEncoder"><span class="toc-text">7.3.1  MessageToByteEncoder</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_7-3_MessageToByteEncoder_API"><span class="toc-text">表 7.3 MessageToByteEncoder API</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#图7-3_ShortToByteEncoder的流程"><span class="toc-text">图7.3 ShortToByteEncoder的流程</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-5"><span class="toc-text">源码7.5</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-3-2_MessageToMessageEncoder"><span class="toc-text">7.3.2  MessageToMessageEncoder</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4_抽象Codec类"><span class="toc-text">7.4  抽象Codec类</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#7-4-1_ByteToMessageCodec"><span class="toc-text">7.4.1  ByteToMessageCodec</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#表_7-5_ByteToMessageCodec_API"><span class="toc-text">表 7.5 ByteToMessageCodec API</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-4-2_MessageToMessageCodec"><span class="toc-text">7.4.2  MessageToMessageCodec</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-7_MessageToMessageCodec"><span class="toc-text">源码7.7 MessageToMessageCodec</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#7-4-3_CombinedChannelDuplexHandler"><span class="toc-text">7.4.3  CombinedChannelDuplexHandler</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-8_ByteToCharDecoder"><span class="toc-text">源码7.8 ByteToCharDecoder</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-9_CharToByteEncoder"><span class="toc-text">源码7.9 CharToByteEncoder</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#源码7-10_CombinedByteCharCodec"><span class="toc-text">源码7.10 CombinedByteCharCodec</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-5_总结"><span class="toc-text">7.5  总结</span></a></li></ol></li></ol>
 		
@@ -374,10 +374,10 @@ Codecs
 
 
 </div>  
-      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+      <div class="openaside"><a class="navbutton" href="#" title="Show Sidebar"></a></div>
 
 <div id="asidepart">
-<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div>
 <aside class="clearfix">
 
   
@@ -387,11 +387,11 @@ Codecs
 
   
 <div class="tagslist">
-	<p class="asidetitle">标签</p>
+	<p class="asidetitle">Tags</p>
 		<ul class="clearfix">
 		
 			
-				<li><a href="/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
+				<li><a href="/tags/Netty/" title="Netty">Netty<sup>5</sup></a></li>
 			
 		
 		</ul>
@@ -399,7 +399,7 @@ Codecs
 
 
   <div class="linkslist">
-  <p class="asidetitle">友情链接</p>
+  <p class="asidetitle">Links</p>
     <ul>
         
     </ul>
@@ -409,7 +409,7 @@ Codecs
 
 
   <div class="weiboshow">
-  <p class="asidetitle">新浪微博</p>
+  <p class="asidetitle">Weibo</p>
     <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=null&verifier=&dpc=1"></iframe>
 </div>
 
@@ -620,7 +620,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
 <!-- Totop Begin -->
 
 	<div id="totop">
-	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	<a title="Back to Top"><img src="/img/scrollup.png"/></a>
 	</div>
 	<script src="/js/totop.js"></script>
 

@@ -20,7 +20,7 @@
 <meta property="og:image" content="http://iamleaf.github.io/img/51bytebuf-architecture.png">
 <meta property="og:image" content="http://iamleaf.github.io/img/52composite-bytebuf-arch.png">
 <meta property="og:image" content="http://iamleaf.github.io/img/53bytebuf-index.png">
-<meta property="og:updated_time" content="2015-10-12T02:32:19.342Z">
+<meta property="og:updated_time" content="2015-10-12T02:32:29.449Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Netty, 第五章 缓冲区--Buffer">
 <meta name="twitter:description" content="缓冲区 BufferNetty Buffer， 它是byte的容器(container)和分配器(allocator). 就像我们以前提到的一样，在网络上传输的最基本的数据始终是字节(byte). java NIO 提供了ByteBuffer作为字节(byte)容器, 但是它的类的使用过于复杂，不是很直观。Netty提供了另一种选择， 即ByteBuf API，相对与JDK本身的ByteBuffe">
@@ -49,7 +49,7 @@
 				<h1 class="site-name"><a href="/" title="leaf&#39;s blog">leaf&#39;s blog</a></h1>
 				<h2 class="blog-motto">宁静致远</h2>
 			</div>
-			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
 			</a></div>
 			<nav class="animated">
 				<ul>
@@ -65,7 +65,7 @@
  					
 					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
 						<label>Search</label>
-						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="Search" />
 						<input type="hidden" name="q" value="site:iamleaf.github.io">
 					</form>
 					
@@ -88,14 +88,14 @@
 		<a href="/about" title="Leaf Ye" target="_blank" itemprop="author">Leaf Ye</a>
 		
   <p class="article-time">
-    <time datetime="2015-10-10T14:25:00.000Z" itemprop="datePublished"> 发表于 2015-10-10</time>
+    <time datetime="2015-10-10T14:25:00.000Z" itemprop="datePublished"> Published 2015-10-10</time>
     
   </p>
 </header>
 	<div class="article-content">
 		
 		<div id="toc" class="toc-article">
-			<strong class="toc-title">文章目录</strong>
+			<strong class="toc-title">Contents</strong>
 		
 		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#缓冲区_Buffer"><span class="toc-text">缓冲区 Buffer</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1_Buffer_API_概览"><span class="toc-text">5.1 Buffer API 概览</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2_ByteBuf_字节数据的容器"><span class="toc-text">5.2 ByteBuf 字节数据的容器</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-1_how_it_works"><span class="toc-text">5.2.1 how it works</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-2_ByteBuf的使用范式"><span class="toc-text">5.2.2 ByteBuf的使用范式</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#5-2-2-1_HEAP_BUFFER_Heap缓冲"><span class="toc-text">5.2.2.1 HEAP BUFFER Heap缓冲</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#后端数据_例子"><span class="toc-text">后端数据 例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#顺序访问例子"><span class="toc-text">顺序访问例子</span></a></li></ol></li><li class="toc-item toc-level-5"><a class="toc-link" href="#5-2-2-2_DIRECT_BUFFERS_直接缓冲"><span class="toc-text">5.2.2.2 DIRECT BUFFERS 直接缓冲</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#5-2-2-3_COMPOSITE_BUFFER_组合缓冲"><span class="toc-text">5.2.2.3 COMPOSITE BUFFER 组合缓冲</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#使用JDK_ByteBuffer_scatter/gather_范式,操纵组合缓冲的例子"><span class="toc-text">使用JDK ByteBuffer scatter/gather 范式,操纵组合缓冲的例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#使用Netty_CompositeByteBuf_的组合缓冲方式例子"><span class="toc-text">使用Netty CompositeByteBuf 的组合缓冲方式例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#根据字节Byte所在的位置(offset)获取该字节所在的ByteBuf的例子"><span class="toc-text">根据字节Byte所在的位置(offset)获取该字节所在的ByteBuf的例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#测试ComponentByteBuf的整合功能，把多个ByteBuf整合到一个ByteBuf,包括区间整合的例子"><span class="toc-text">测试ComponentByteBuf的整合功能，把多个ByteBuf整合到一个ByteBuf,包括区间整合的例子</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#测试CompositeByteBuf就和普通的ByteBuf一样的操纵方式"><span class="toc-text">测试CompositeByteBuf就和普通的ByteBuf一样的操纵方式</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#测试ReferenceCounet在CompositeByteBuf的作用"><span class="toc-text">测试ReferenceCounet在CompositeByteBuf的作用</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3_字节级别的操作"><span class="toc-text">5.3 字节级别的操作</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-1_随机访问"><span class="toc-text">5.3.1 随机访问</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#随机访问例子"><span class="toc-text">随机访问例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-2_顺序访问"><span class="toc-text">5.3.2 顺序访问</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#顺序访问例子2"><span class="toc-text">顺序访问例子2</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-3_可丢弃的字节"><span class="toc-text">5.3.3 可丢弃的字节</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#丢弃字节例子"><span class="toc-text">丢弃字节例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-4_可读的字节"><span class="toc-text">5.3.4 可读的字节</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#判断可读字节例子"><span class="toc-text">判断可读字节例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-5_可写的字节"><span class="toc-text">5.3.5 可写的字节</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#判断可写字节例子"><span class="toc-text">判断可写字节例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-6_下标管理(index_management)"><span class="toc-text">5.3.6 下标管理(index management)</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-7_搜索选项"><span class="toc-text">5.3.7 搜索选项</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-8_派生缓冲_derived_buffers"><span class="toc-text">5.3.8 派生缓冲 derived buffers</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#派生缓冲例子"><span class="toc-text">派生缓冲例子</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-3-9_读写动作"><span class="toc-text">5.3.9 读写动作</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#随机访问Int,Unsigned值例子"><span class="toc-text">随机访问Int,Unsigned值例子</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#顺序读写Long类型例子"><span class="toc-text">顺序读写Long类型例子</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4_ByteBufHolder"><span class="toc-text">5.4 ByteBufHolder</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5_ByteBuf_分配"><span class="toc-text">5.5 ByteBuf 分配</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-1_按需方式:ByteBufAllocator"><span class="toc-text">5.5.1 按需方式:ByteBufAllocator</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#ByteBufUtil-java源码"><span class="toc-text">ByteBufUtil.java源码</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-2_Unpooled_Buffer"><span class="toc-text">5.5.2 Unpooled Buffer</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-3_ByteBufUtil"><span class="toc-text">5.5.3 ByteBufUtil</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-6_Reference_Counting"><span class="toc-text">5.6 Reference Counting</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#reference_counting_释放例子"><span class="toc-text">reference counting 释放例子</span></a></li></ol></li></ol></li></ol></li></ol>
 		
@@ -357,10 +357,10 @@
 
 
 </div>  
-      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+      <div class="openaside"><a class="navbutton" href="#" title="Show Sidebar"></a></div>
 
 <div id="asidepart">
-<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div>
 <aside class="clearfix">
 
   
@@ -370,11 +370,11 @@
 
   
 <div class="tagslist">
-	<p class="asidetitle">标签</p>
+	<p class="asidetitle">Tags</p>
 		<ul class="clearfix">
 		
 			
-				<li><a href="/tags/Netty/" title="Netty">Netty<sup>4</sup></a></li>
+				<li><a href="/tags/Netty/" title="Netty">Netty<sup>5</sup></a></li>
 			
 		
 		</ul>
@@ -382,7 +382,7 @@
 
 
   <div class="linkslist">
-  <p class="asidetitle">友情链接</p>
+  <p class="asidetitle">Links</p>
     <ul>
         
     </ul>
@@ -392,7 +392,7 @@
 
 
   <div class="weiboshow">
-  <p class="asidetitle">新浪微博</p>
+  <p class="asidetitle">Weibo</p>
     <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=null&verifier=&dpc=1"></iframe>
 </div>
 
@@ -603,7 +603,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
 <!-- Totop Begin -->
 
 	<div id="totop">
-	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	<a title="Back to Top"><img src="/img/scrollup.png"/></a>
 	</div>
 	<script src="/js/totop.js"></script>
 
